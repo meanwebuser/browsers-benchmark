@@ -234,6 +234,18 @@ And vise versa, with score >= 0.7 it will be much easier.
    python main.py
    ```
 
+7. **Run diagnostic engine tests (optional)**
+   All test scripts are located in `tests/`:
+   - `tests/test_stealth_python_params.py` - validates Python -> stealth navigator params per engine
+   - `tests/test_proxy_env.py` - validates proxy usage per engine
+   - `tests/test_headed_xvfb_env.py` - validates headed launch behavior in headless env (Xvfb fallback)
+
+   ```bash
+   ./venv/bin/python tests/test_stealth_python_params.py
+   ./venv/bin/python tests/test_proxy_env.py --allow-missing-proxy
+   ./venv/bin/python tests/test_headed_xvfb_env.py
+   ```
+
 ## ⚙️ Configuration
 
 ### Environment Variables (.env)
@@ -303,6 +315,7 @@ The codebase follows a modular architecture for extensibility:
 ```
 ├── config/           # Configuration management
 ├── engines/          # Browser engine implementations  
+├── tests/            # Standalone engine diagnostics
 ├── utils/
 │   ├── targets/      # Test target definitions
 │   ├── report/       # Report generation system

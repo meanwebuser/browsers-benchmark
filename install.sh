@@ -137,6 +137,18 @@ else
   warn "No package.json/package-lock.json found, skipping npm install"
 fi
 
+# Some Ulixee packages rely on postinstall binaries that may be missing
+# when dependencies are restored from caches. Ensure they exist.
+if [ -d node_modules/@unblocked-web/agent-mitm-socket ] && [ ! -x node_modules/@unblocked-web/agent-mitm-socket/dist/connect ]; then
+  log "Installing missing @unblocked-web/agent-mitm-socket binary"
+  node node_modules/@unblocked-web/agent-mitm-socket/install.js
+fi
+
+if [ -d node_modules/@ulixee/chrome-98-0 ]; then
+  log "Ensuring Ulixee Chrome runtime is installed"
+  node node_modules/@ulixee/chrome-98-0/install.js
+fi
+
 PLAYWRIGHT_SIG_FILE="$STATE_DIR/playwright.sig"
 PLAYWRIGHT_SIG="$(get_py_pkg_version playwright)"
 if [ ! -f "$PLAYWRIGHT_SIG_FILE" ] || [ "$PLAYWRIGHT_SIG" != "$(cat "$PLAYWRIGHT_SIG_FILE")" ]; then

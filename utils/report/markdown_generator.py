@@ -408,6 +408,34 @@ def _write_visualization_sections(f, image_paths: Dict[str, str]) -> None:
     else:
         f.write("*No timings dashboard image available*\n\n")
 
+    # detailed bypass charts
+    f.write("## Bypass Detailed Charts\n\n")
+    for key, title in [
+        ("bypass_rate_image", "Bypass Rate"),
+        ("bypass_protection_heatmap_image", "Bypass Protection Heatmap"),
+        ("bypass_resource_usage_image", "Bypass Resource Usage"),
+        ("bypass_load_time_image", "Bypass Load Time"),
+    ]:
+        if key in image_paths and image_paths[key]:
+            f.write(f"### {title}\n\n")
+            f.write(
+                f"![{title}]({os.path.join(settings.paths.media_dir, os.path.basename(image_paths[key]))})\n\n"
+            )
+
+    # detailed timings charts
+    f.write("## Timings Detailed Charts\n\n")
+    for key, title in [
+        ("timing_startup_image", "Startup Time"),
+        ("timing_bypass_image", "Bypass Navigation vs Full Test"),
+        ("timing_browser_data_image", "Browser Data Navigation vs Full Test"),
+        ("timing_overhead_image", "Timing Overhead"),
+    ]:
+        if key in image_paths and image_paths[key]:
+            f.write(f"### {title}\n\n")
+            f.write(
+                f"![{title}]({os.path.join(settings.paths.media_dir, os.path.basename(image_paths[key]))})\n\n"
+            )
+
     # recaptcha visualization
     f.write("## Recaptcha Score Visualization\n\n")
     if "recaptcha_score_image" in image_paths and image_paths["recaptcha_score_image"]:

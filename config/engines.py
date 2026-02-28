@@ -74,27 +74,11 @@ class EnginesSettings(BaseSettings):
             "both",
         )
 
-        def should_include_stealth_variant(has_stealth: bool) -> bool:
-            if stealth_mode == "both":
-                return True
-            if stealth_mode == "use_stealth":
-                return has_stealth
-            return not has_stealth
-
         base_engines = [
             {
                 "class": PlaywrightEngine,
                 "params": {
                     "headless": True,
-                    "name": "playwright-chrome_headless",
-                    "browser_type": "chromium",
-                    "use_system_chrome": True,
-                }
-            },
-            {
-                "class": PlaywrightEngine,
-                "params": {
-                    "headless": False,
                     "name": "playwright-chrome",
                     "browser_type": "chromium",
                     "use_system_chrome": True,
@@ -103,7 +87,7 @@ class EnginesSettings(BaseSettings):
             {
                 "class": PlaywrightEngine,
                 "params": {
-                    "headless": False,
+                    "headless": True,
                     "name": "playwright-connect-over-cdp-chrome",
                     "browser_type": "chromium",
                     "use_system_chrome": True,
@@ -112,69 +96,36 @@ class EnginesSettings(BaseSettings):
             },
             {
                 "class": PlaywrightEngine,
-                "params": {"headless": True, "name": "playwright-firefox_headless", "browser_type": "firefox"}
-            },
-            {
-                "class": PlaywrightEngine,
-                "params": {"headless": False, "name": "playwright-firefox", "browser_type": "firefox"}
+                "params": {"headless": True, "name": "playwright-firefox", "browser_type": "firefox"}
             },
             {
                 "class": CamoufoxEngine,
-                "params": {"headless": True, "name": "camoufox_headless"}
-            },
-            {
-                "class": CamoufoxEngine,
-                "params": {"headless": False, "name": "camoufox"}
+                "params": {"headless": True, "name": "camoufox"}
             },
             {
                 "class": TfPlaywrightStealthEngine,
-                "params": {"headless": True, "name": "tf-playwright-stealth-chromium_headless",
+                "params": {"headless": True, "name": "tf-playwright-stealth-chromium",
                            "browser_type": "chromium"}
             },
             {
                 "class": TfPlaywrightStealthEngine,
-                "params": {"headless": False, "name": "tf-playwright-stealth-chromium", "browser_type": "chromium"}
-            },
-            {
-                "class": TfPlaywrightStealthEngine,
-                "params": {"headless": True, "name": "tf-playwright-stealth-firefox_headless",
-                           "browser_type": "firefox"}
-            },
-            {
-                "class": TfPlaywrightStealthEngine,
-                "params": {"headless": False, "name": "tf-playwright-stealth-firefox", "browser_type": "firefox"}
+                "params": {"headless": True, "name": "tf-playwright-stealth-firefox", "browser_type": "firefox"}
             },
             {
                 "class": PatchrightEngine,
-                "params": {"headless": True, "name": "patchright_headless"}
-            },
-            {
-                "class": PatchrightEngine,
-                "params": {"headless": False, "name": "patchright"}
+                "params": {"headless": True, "name": "patchright"}
             },
             {
                 "class": SeleniumEngine,
-                "params": {"headless": True, "name": "selenium-chrome_headless", "browser_type": "chrome"}
-            },
-            {
-                "class": SeleniumEngine,
-                "params": {"headless": False, "name": "selenium-chrome", "browser_type": "chrome"}
+                "params": {"headless": True, "name": "selenium-chrome", "browser_type": "chrome"}
             },
             {
                 "class": NoDriverEngine,
-                "params": {"headless": True, "name": "nodriver-chrome_headless", "browser_type": "chrome"}
-            },
-            {
-                "class": NoDriverEngine,
-                "params": {"headless": False, "name": "nodriver-chrome", "browser_type": "chrome"}
+                "params": {"headless": True, "name": "nodriver-chrome", "browser_type": "chrome"}
             },
             {
                 "class": ZenDriverEngine,
-                "params": {"headless": True, "name": "zendriver-chrome_headless", "browser_type": "chrome"}
-            },
-            {
-                "class": ZenDriverEngine,
-                "params": {"headless": False, "name": "zendriver-chrome", "browser_type": "chrome"}
+                "params": {"headless": True, "name": "zendriver-chrome", "browser_type": "chrome"}
             },
             {
                 "class": SeleniumbaseEngine,
@@ -183,41 +134,55 @@ class EnginesSettings(BaseSettings):
             },
             {
                 "class": SeleniumBaseUCEngine,
-                "params": {"headless": True, "name": "seleniumbase-uc-chrome_headless"}
+                "params": {"headless": True, "name": "seleniumbase-uc-chrome"}
             },
             {
                 "class": UlixeeHeroEngine,
-                "params": {"headless": True, "name": "ulixee-hero_headless"}
+                "params": {"headless": True, "name": "ulixee-hero"}
             },
-            {
-                "class": NodePlaywrightEngine,
-                "params": {
-                    "headless": True,
-                    "name": "node-playwright-chromium_headless",
-                    "browser_type": "chromium",
-                    "use_system_chrome": True,
-                }
-            }
+            # {
+            #     "class": NodePlaywrightEngine,
+            #     "params": {
+            #         "headless": True,
+            #         "name": "node-playwright-chromium_headless",
+            #         "browser_type": "chromium",
+            #         "use_system_chrome": True,
+            #     }
+            # }
         ]
 
-        # Build two variants for every engine: with and without stealth init script.
-        # Engines that don't support init scripts will ignore this parameter via **kwargs.
-        engine_variants: List[Dict[str, Any]] = []
-        for engine in base_engines:
-            params = dict(engine.get("params", {}))
-            base_name = params.get("name", engine["class"].__name__.lower())
+        # Build a single engine list and let ENV override behavior globally.
+        # This avoids matrix-style duplication by stealth/headless modes.
+        engine_variants: List[Dict[str, Any]] = [
+            {**engine, "params": dict(engine.get("params", {}))}
+            for engine in base_engines
+        ]
 
-            without_stealth_params = {**params, "name": f"{base_name}-without-stealth"}
-            with_stealth_params = {
-                **params,
-                "name": f"{base_name}-with-stealth",
-                "init_scripts": list(STEALTH_INIT_SCRIPTS),
-            }
+        if stealth_mode == "no_stealth":
+            engine_variants = [
+                engine
+                for engine in engine_variants
+                if engine.get("class") is not TfPlaywrightStealthEngine
+            ]
 
-            if should_include_stealth_variant(False):
-                engine_variants.append({**engine, "params": without_stealth_params})
-            if should_include_stealth_variant(True):
-                engine_variants.append({**engine, "params": with_stealth_params})
+        for engine in engine_variants:
+            params = engine.setdefault("params", {})
+
+            if stealth_mode == "use_stealth":
+                init_scripts = list(params.get("init_scripts", []))
+                for script_name in STEALTH_INIT_SCRIPTS:
+                    if script_name not in init_scripts:
+                        init_scripts.append(script_name)
+                params["init_scripts"] = init_scripts
+            elif stealth_mode == "no_stealth":
+                init_scripts = [x for x in params.get("init_scripts", []) if x not in STEALTH_INIT_SCRIPTS]
+                if init_scripts:
+                    params["init_scripts"] = init_scripts
+                else:
+                    params.pop("init_scripts", None)
+
+            if ENGINES_TO_TEST_MODE in {"headless", "headed"} and "headless" in params:
+                params["headless"] = ENGINES_TO_TEST_MODE == "headless"
 
         if user_agent_mode == "random":
             for engine in engine_variants:
@@ -231,14 +196,6 @@ class EnginesSettings(BaseSettings):
         else:
             for engine in engine_variants:
                 engine.setdefault("params", {})
-
-        if ENGINES_TO_TEST_MODE != "both":
-            require_headless = ENGINES_TO_TEST_MODE == "headless"
-            engine_variants = [
-                engine
-                for engine in engine_variants
-                if engine.get("params", {}).get("headless", False) is require_headless
-            ]
 
         has_display = bool(
             os.environ.get("DISPLAY")

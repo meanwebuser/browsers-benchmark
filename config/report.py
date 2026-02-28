@@ -62,7 +62,15 @@ class FilenameSettings(BaseModel):
     """Configuration settings for output filenames"""
 
     bypass_dashboard: str = "bypass_dashboard.png"
+    bypass_rate: str = "bypass_rate.png"
+    bypass_protection_heatmap: str = "bypass_protection_heatmap.png"
+    bypass_resource_usage: str = "bypass_resource_usage.png"
+    bypass_load_time: str = "bypass_load_time.png"
     timings_dashboard: str = "timings_dashboard.png"
+    timing_startup: str = "timing_startup.png"
+    timing_bypass: str = "timing_bypass.png"
+    timing_browser_data: str = "timing_browser_data.png"
+    timing_overhead: str = "timing_overhead.png"
     recaptcha_scores: str = "recaptcha_scores.png"
     fingerprint_scores: str = "fingerprint_scores.png"
     fingerprint_demo: str = "fingerprint_demo.png"
@@ -98,7 +106,15 @@ class ReportSettings(BaseSettings):
 
     # output filenames
     BYPASS_DASHBOARD_FILENAME: str = "bypass_dashboard.png"
+    BYPASS_RATE_FILENAME: str = "bypass_rate.png"
+    BYPASS_PROTECTION_HEATMAP_FILENAME: str = "bypass_protection_heatmap.png"
+    BYPASS_RESOURCE_USAGE_FILENAME: str = "bypass_resource_usage.png"
+    BYPASS_LOAD_TIME_FILENAME: str = "bypass_load_time.png"
     TIMINGS_DASHBOARD_FILENAME: str = "timings_dashboard.png"
+    TIMING_STARTUP_FILENAME: str = "timing_startup.png"
+    TIMING_BYPASS_FILENAME: str = "timing_bypass.png"
+    TIMING_BROWSER_DATA_FILENAME: str = "timing_browser_data.png"
+    TIMING_OVERHEAD_FILENAME: str = "timing_overhead.png"
     RECAPTCHA_SCORES_FILENAME: str = "recaptcha_scores.png"
     FINGERPRINT_SCORES_FILENAME: str = "fingerprint_scores.png"
     FINGERPRINT_DEMO_FILENAME: str = "fingerprint_demo.png"
@@ -145,7 +161,15 @@ class ReportSettings(BaseSettings):
 
         return FilenameSettings(
             bypass_dashboard=self.BYPASS_DASHBOARD_FILENAME,
+            bypass_rate=self.BYPASS_RATE_FILENAME,
+            bypass_protection_heatmap=self.BYPASS_PROTECTION_HEATMAP_FILENAME,
+            bypass_resource_usage=self.BYPASS_RESOURCE_USAGE_FILENAME,
+            bypass_load_time=self.BYPASS_LOAD_TIME_FILENAME,
             timings_dashboard=self.TIMINGS_DASHBOARD_FILENAME,
+            timing_startup=self.TIMING_STARTUP_FILENAME,
+            timing_bypass=self.TIMING_BYPASS_FILENAME,
+            timing_browser_data=self.TIMING_BROWSER_DATA_FILENAME,
+            timing_overhead=self.TIMING_OVERHEAD_FILENAME,
             recaptcha_scores=self.RECAPTCHA_SCORES_FILENAME,
             fingerprint_scores=self.FINGERPRINT_SCORES_FILENAME,
             fingerprint_demo=self.FINGERPRINT_DEMO_FILENAME,

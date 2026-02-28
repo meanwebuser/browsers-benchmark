@@ -2,14 +2,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline");
 
-let Hero;
-try {
-  Hero = require("@ulixee/hero-playground");
-} catch (err) {
-  Hero = require("@ulixee/hero");
+// Hero in this benchmark does not use upstream proxies, so MITM can be disabled.
+// This avoids socket-setup failures in constrained hosts.
+if (process.env.UBK_MITM_DISABLE === undefined) {
+  process.env.UBK_MITM_DISABLE = "true";
 }
 
+const Hero = require("@ulixee/hero");
+const UlixeeServer = require("@ulixee/server").default;
+
 let hero = null;
+let heroServer = null;
 let initScripts = [];
 let commandQueue = Promise.resolve();
 
@@ -31,10 +34,7 @@ function toPlainHeaders(headers) {
 }
 
 async function handleStart(payload) {
-  if (hero) {
-    await hero.close();
-    hero = null;
-  }
+  await handleStop();
 
   const viewport = payload.viewport || {};
   const options = {
@@ -50,7 +50,14 @@ async function handleStart(payload) {
     ? payload.initScripts.filter(x => typeof x === "string" && x.trim().length > 0)
     : [];
 
+  // Avoid global host auto-routing to a stale/fixed port shared by other processes.
+  heroServer = new UlixeeServer();
+  await heroServer.listen({ port: 0 }, false);
+  options.connectionToCore = { host: await heroServer.address };
+
   hero = new Hero(options);
+  // In current Hero alpha builds, activeTab is not immediately ready after constructor.
+  await hero.tabs;
   await applyInitScripts();
   return { started: true };
 }
@@ -59,7 +66,7 @@ async function applyInitScripts() {
   if (!hero || !initScripts.length) return;
   for (const source of initScripts) {
     try {
-      await hero.activeTab.getJsValue(`(() => {\n${source}\n; return true;\n})()`);
+      await hero.getJsValue(`(() => {\n${source}\n; return true;\n})()`);
     } catch (err) {
       process.stderr.write(`[hero-worker] init script failed: ${err && err.message ? err.message : String(err)}\n`);
     }
@@ -125,7 +132,7 @@ async function handleLocator(payload) {
 
 async function handleGetPageContent() {
   if (!hero) throw new Error("Hero is not started");
-  const text = await hero.activeTab.getJsValue(
+  const text = await hero.getJsValue(
     "(document.documentElement && (document.documentElement.innerText || document.documentElement.textContent)) || ''",
   );
   return { content: String(text || "").slice(0, 300000) };
@@ -135,7 +142,7 @@ async function handleExecuteJs(payload) {
   if (!hero) throw new Error("Hero is not started");
   const script = String(payload.script || "");
   const expression = `(() => {\n${script}\n})()`;
-  const value = await hero.activeTab.getJsValue(expression);
+  const value = await hero.getJsValue(expression);
   return { value: value === undefined ? null : value };
 }
 
@@ -150,9 +157,14 @@ async function handleScreenshot(payload) {
 }
 
 async function handleStop() {
-  if (hero) {
-    await hero.close();
-    hero = null;
+  if (hero || heroServer) {
+    try {
+      if (hero) await hero.close();
+    } finally {
+      hero = null;
+      if (heroServer) await heroServer.close();
+      heroServer = null;
+    }
   }
   return { stopped: true };
 }
@@ -222,7 +234,7 @@ rl.on("line", line => {
 
 rl.on("close", async () => {
   try {
-    if (hero) await hero.close();
+    if (hero || heroServer) await handleStop();
   } catch (err) {
     process.stderr.write(`[hero-worker] close error: ${err && err.stack ? err.stack : String(err)}\n`);
   } finally {

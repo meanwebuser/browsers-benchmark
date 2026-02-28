@@ -157,6 +157,292 @@ def generate_timings_dashboard_image(
     return image_path
 
 
+def _save_no_data_image(image_path: str, title: str, message: str) -> str:
+    plt.figure(figsize=report_settings.visualization.figure_size_medium)
+    plt.title(title, fontsize=16)
+    plt.text(0.5, 0.5, message, ha='center', va='center', fontsize=14)
+    plt.xticks([])
+    plt.yticks([])
+    plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+    plt.close('all')
+    return image_path
+
+
+def generate_bypass_detailed_images(df: pd.DataFrame, output_dir: str) -> Dict[str, str]:
+    """Generate separate charts for each block of bypass_dashboard."""
+
+    images: Dict[str, str] = {}
+
+    # Bypass rate
+    image_path = os.path.join(output_dir, report_settings.filenames.bypass_rate)
+    if df.empty:
+        images["bypass_rate_image"] = _save_no_data_image(image_path, "Bypass Rate by Browser", "No bypass data available")
+    else:
+        plt.figure(figsize=report_settings.visualization.figure_size_medium)
+        bypass_by_engine = df.groupby("engine")["bypass"].mean().reset_index()
+        bypass_by_engine["bypass_percent"] = bypass_by_engine["bypass"] * 100
+        bypass_by_engine = bypass_by_engine.sort_values("bypass_percent", ascending=False)
+        bars = sns.barplot(x="engine", y="bypass_percent", hue="engine", data=bypass_by_engine, palette="viridis", legend=False)
+        for i, v in enumerate(bypass_by_engine["bypass_percent"]):
+            bars.text(i, v + 1, f"{v:.1f}%", ha='center', va='bottom', fontsize=9)
+        plt.title("Bypass Rate by Browser", fontsize=16)
+        plt.ylabel("Bypass Rate (%)", fontsize=12)
+        plt.xticks(rotation=45, ha="right", fontsize=10)
+        plt.grid(axis="y", **report_settings.colors.grid_style)
+        plt.tight_layout()
+        plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+        plt.close('all')
+        images["bypass_rate_image"] = image_path
+
+    # Protection heatmap
+    image_path = os.path.join(output_dir, report_settings.filenames.bypass_protection_heatmap)
+    if df.empty:
+        images["bypass_protection_heatmap_image"] = _save_no_data_image(
+            image_path,
+            "Bypass Rate by Protection Type",
+            "No bypass data available",
+        )
+    else:
+        local_df = df.copy()
+        if "protection_type" not in local_df.columns:
+            local_df["protection_type"] = local_df["target"]
+        local_df["bypass"] = pd.to_numeric(local_df["bypass"], errors="coerce").fillna(0)
+        engines = local_df.groupby("engine")["bypass"].mean().sort_values(ascending=False).index.tolist()
+        heatmap_data = pd.pivot_table(
+            local_df, values="bypass", index="engine", columns="protection_type", aggfunc="mean", fill_value=0
+        )
+        if not heatmap_data.empty:
+            heatmap_data = heatmap_data.reindex(engines).astype(float)
+
+        n_rows = max(1, len(heatmap_data.index))
+        n_cols = max(1, len(heatmap_data.columns))
+        fig_w = max(12.0, 0.95 * n_cols + 8.0)
+        fig_h = max(8.0, 0.42 * n_rows + 2.8)
+        plt.figure(figsize=(fig_w, fig_h))
+
+        show_annot = (n_rows * n_cols) <= 140
+        y_font = 11 if n_rows <= 20 else 9 if n_rows <= 35 else 8
+
+        sns.heatmap(
+            heatmap_data,
+            annot=show_annot,
+            cmap="RdYlGn",
+            vmin=0,
+            vmax=1,
+            fmt=".2f",
+            linewidths=0.5,
+            cbar_kws={"shrink": 0.9},
+        )
+        plt.title("Bypass Rate by Protection Type", fontsize=18)
+        plt.xticks(rotation=90, ha="center", fontsize=11)
+        plt.yticks(fontsize=y_font)
+        # Reserve space for long engine labels and vertical protection labels.
+        plt.subplots_adjust(left=0.45, bottom=0.32, right=0.97, top=0.92)
+        plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+        plt.close('all')
+        images["bypass_protection_heatmap_image"] = image_path
+
+    # Resource usage
+    image_path = os.path.join(output_dir, report_settings.filenames.bypass_resource_usage)
+    required_cols = {"engine", "avg_memory_mb", "avg_cpu_percent"}
+    if df.empty or not required_cols.issubset(df.columns):
+        images["bypass_resource_usage_image"] = _save_no_data_image(
+            image_path,
+            "Resource Usage (Normalized)",
+            "No resource usage data available",
+        )
+    else:
+        plt.figure(figsize=report_settings.visualization.figure_size_medium)
+        resource_data = df.groupby("engine")[["avg_memory_mb", "avg_cpu_percent"]].mean().reset_index()
+        resource_data = resource_data.sort_values("avg_memory_mb")
+        x = np.arange(len(resource_data))
+        width = 0.35
+        max_memory = max(0.1, resource_data["avg_memory_mb"].max())
+        max_cpu = max(0.1, resource_data["avg_cpu_percent"].max())
+        memory_normalized = resource_data["avg_memory_mb"] / max_memory * 100
+        cpu_normalized = resource_data["avg_cpu_percent"] / max_cpu * 100
+        plt.bar(x - width / 2, memory_normalized, width, label="Memory", alpha=0.7, color="steelblue")
+        plt.bar(x + width / 2, cpu_normalized, width, label="CPU", alpha=0.7, color="firebrick")
+        plt.title("Resource Usage (Normalized)", fontsize=16)
+        plt.ylabel("Usage (% of maximum)", fontsize=12)
+        plt.xticks(x, resource_data["engine"].tolist(), rotation=45, ha="right", fontsize=10)
+        plt.legend(loc="upper right")
+        plt.grid(axis="y", **report_settings.colors.grid_style)
+        plt.tight_layout()
+        plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+        plt.close('all')
+        images["bypass_resource_usage_image"] = image_path
+
+    # Load time
+    image_path = os.path.join(output_dir, report_settings.filenames.bypass_load_time)
+    if df.empty or "engine" not in df.columns:
+        images["bypass_load_time_image"] = _save_no_data_image(
+            image_path,
+            "Average Page Load Time by Browser",
+            "No load time data available",
+        )
+    else:
+        plt.figure(figsize=report_settings.visualization.figure_size_medium)
+        local_df = df.copy()
+        if "load_time_ms" not in local_df.columns and "load_time" in local_df.columns:
+            local_df["load_time_ms"] = local_df["load_time"] * 1000
+        elif "load_time_ms" not in local_df.columns:
+            local_df["load_time_ms"] = 0
+        load_time_by_engine = local_df.groupby("engine")["load_time_ms"].mean().reset_index().sort_values("load_time_ms")
+        bars = sns.barplot(x="engine", y="load_time_ms", hue="engine", data=load_time_by_engine, palette="viridis", legend=False)
+        for i, v in enumerate(load_time_by_engine["load_time_ms"]):
+            bars.text(i, v + 50, f"{v:.0f} ms", ha="center", fontsize=10)
+        plt.title("Average Page Load Time by Browser", fontsize=16)
+        plt.ylabel("Load Time (ms)", fontsize=12)
+        plt.xticks(rotation=45, ha="right", fontsize=10)
+        plt.grid(axis="y", **report_settings.colors.grid_style)
+        plt.tight_layout()
+        plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+        plt.close('all')
+        images["bypass_load_time_image"] = image_path
+
+    return images
+
+
+def generate_timings_detailed_images(
+        bypass_df: pd.DataFrame,
+        browser_data_df: pd.DataFrame,
+        output_dir: str
+) -> Dict[str, str]:
+    """Generate separate charts for each block of timings_dashboard."""
+
+    images: Dict[str, str] = {}
+
+    # Startup
+    image_path = os.path.join(output_dir, report_settings.filenames.timing_startup)
+    frames: list[pd.DataFrame] = []
+    if not bypass_df.empty and {"engine", "startup_time_ms"}.issubset(bypass_df.columns):
+        frames.append(bypass_df[["engine", "startup_time_ms"]].copy())
+    if not browser_data_df.empty and {"engine", "startup_time_ms"}.issubset(browser_data_df.columns):
+        frames.append(browser_data_df[["engine", "startup_time_ms"]].copy())
+    if not frames:
+        images["timing_startup_image"] = _save_no_data_image(image_path, "Browser Startup Time", "No startup timing data available")
+    else:
+        plt.figure(figsize=report_settings.visualization.figure_size_medium)
+        startup_df = pd.concat(frames, ignore_index=True)
+        startup_df["startup_time_ms"] = pd.to_numeric(startup_df["startup_time_ms"], errors="coerce")
+        startup_df = startup_df.dropna(subset=["startup_time_ms"])
+        startup_data = startup_df.groupby("engine")["startup_time_ms"].mean().reset_index().sort_values("startup_time_ms")
+        sns.barplot(x="engine", y="startup_time_ms", hue="engine", data=startup_data, palette="viridis", legend=False)
+        plt.title("Browser Startup Time", fontsize=16)
+        plt.ylabel("ms", fontsize=12)
+        plt.xticks(rotation=45, ha="right", fontsize=10)
+        plt.grid(axis="y", **report_settings.colors.grid_style)
+        plt.tight_layout()
+        plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+        plt.close('all')
+        images["timing_startup_image"] = image_path
+
+    # Bypass navigation vs full test
+    image_path = os.path.join(output_dir, report_settings.filenames.timing_bypass)
+    if bypass_df.empty or not {"engine", "load_time_ms", "test_duration_ms"}.issubset(bypass_df.columns):
+        images["timing_bypass_image"] = _save_no_data_image(image_path, "Bypass: Navigation vs Full Test", "No bypass timing data available")
+    else:
+        plt.figure(figsize=report_settings.visualization.figure_size_medium)
+        local_df = bypass_df.copy()
+        local_df["load_time_ms"] = pd.to_numeric(local_df["load_time_ms"], errors="coerce")
+        local_df["test_duration_ms"] = pd.to_numeric(local_df["test_duration_ms"], errors="coerce")
+        local_df = local_df.dropna(subset=["load_time_ms", "test_duration_ms"])
+        by_engine = local_df.groupby("engine")[["load_time_ms", "test_duration_ms"]].mean().reset_index().sort_values("test_duration_ms")
+        x = np.arange(len(by_engine))
+        width = 0.38
+        plt.bar(x - width / 2, by_engine["load_time_ms"], width, label="Navigation", color="#4C78A8", alpha=0.9)
+        plt.bar(x + width / 2, by_engine["test_duration_ms"], width, label="Full test", color="#F58518", alpha=0.85)
+        plt.title("Bypass: Navigation vs Full Test", fontsize=16)
+        plt.ylabel("ms", fontsize=12)
+        plt.xticks(x, by_engine["engine"].tolist(), rotation=45, ha="right", fontsize=10)
+        plt.legend(loc="upper left", fontsize=9)
+        plt.grid(axis="y", **report_settings.colors.grid_style)
+        plt.tight_layout()
+        plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+        plt.close('all')
+        images["timing_bypass_image"] = image_path
+
+    # Browser-data navigation vs full test
+    image_path = os.path.join(output_dir, report_settings.filenames.timing_browser_data)
+    required = {"engine", "navigation_time_ms", "test_duration_ms"}
+    if browser_data_df.empty or not required.issubset(browser_data_df.columns):
+        images["timing_browser_data_image"] = _save_no_data_image(
+            image_path,
+            "Browser Data: Navigation vs Full Test",
+            "No browser-data timing data available",
+        )
+    else:
+        plt.figure(figsize=report_settings.visualization.figure_size_medium)
+        local_df = browser_data_df.copy()
+        local_df["navigation_time_ms"] = pd.to_numeric(local_df["navigation_time_ms"], errors="coerce")
+        local_df["test_duration_ms"] = pd.to_numeric(local_df["test_duration_ms"], errors="coerce")
+        local_df = local_df.dropna(subset=["navigation_time_ms", "test_duration_ms"])
+        by_engine = local_df.groupby("engine")[["navigation_time_ms", "test_duration_ms"]].mean().reset_index().sort_values("test_duration_ms")
+        x = np.arange(len(by_engine))
+        width = 0.38
+        plt.bar(x - width / 2, by_engine["navigation_time_ms"], width, label="Navigation", color="#54A24B", alpha=0.9)
+        plt.bar(x + width / 2, by_engine["test_duration_ms"], width, label="Full test", color="#E45756", alpha=0.85)
+        plt.title("Browser Data: Navigation vs Full Test", fontsize=16)
+        plt.ylabel("ms", fontsize=12)
+        plt.xticks(x, by_engine["engine"].tolist(), rotation=45, ha="right", fontsize=10)
+        plt.legend(loc="upper left", fontsize=9)
+        plt.grid(axis="y", **report_settings.colors.grid_style)
+        plt.tight_layout()
+        plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+        plt.close('all')
+        images["timing_browser_data_image"] = image_path
+
+    # Overhead
+    image_path = os.path.join(output_dir, report_settings.filenames.timing_overhead)
+    overhead_frames: list[pd.DataFrame] = []
+    if not bypass_df.empty and {"engine", "load_time_ms", "test_duration_ms"}.issubset(bypass_df.columns):
+        local_df = bypass_df.copy()
+        local_df["load_time_ms"] = pd.to_numeric(local_df["load_time_ms"], errors="coerce")
+        local_df["test_duration_ms"] = pd.to_numeric(local_df["test_duration_ms"], errors="coerce")
+        local_df = local_df.dropna(subset=["load_time_ms", "test_duration_ms"])
+        if not local_df.empty:
+            local_df["overhead_ms"] = (local_df["test_duration_ms"] - local_df["load_time_ms"]).clip(lower=0)
+            overhead_frames.append(local_df.groupby("engine", as_index=False)["overhead_ms"].mean().assign(source="bypass"))
+    if not browser_data_df.empty and {"engine", "navigation_time_ms", "test_duration_ms"}.issubset(browser_data_df.columns):
+        local_df = browser_data_df.copy()
+        local_df["navigation_time_ms"] = pd.to_numeric(local_df["navigation_time_ms"], errors="coerce")
+        local_df["test_duration_ms"] = pd.to_numeric(local_df["test_duration_ms"], errors="coerce")
+        local_df = local_df.dropna(subset=["navigation_time_ms", "test_duration_ms"])
+        if not local_df.empty:
+            local_df["overhead_ms"] = (local_df["test_duration_ms"] - local_df["navigation_time_ms"]).clip(lower=0)
+            overhead_frames.append(local_df.groupby("engine", as_index=False)["overhead_ms"].mean().assign(source="browser_data"))
+    if not overhead_frames:
+        images["timing_overhead_image"] = _save_no_data_image(
+            image_path,
+            "Timing Overhead (Full Test - Navigation)",
+            "No overhead timing data available",
+        )
+    else:
+        plt.figure(figsize=report_settings.visualization.figure_size_medium)
+        overhead_df = pd.concat(overhead_frames, ignore_index=True)
+        pivot_df = overhead_df.pivot_table(index="engine", columns="source", values="overhead_ms", aggfunc="mean").fillna(0)
+        pivot_df["total"] = pivot_df.sum(axis=1)
+        pivot_df = pivot_df.sort_values("total").drop(columns=["total"])
+        x = np.arange(len(pivot_df))
+        width = 0.38
+        bypass_values = pivot_df["bypass"] if "bypass" in pivot_df.columns else np.zeros(len(pivot_df))
+        browser_values = pivot_df["browser_data"] if "browser_data" in pivot_df.columns else np.zeros(len(pivot_df))
+        plt.bar(x - width / 2, bypass_values, width, label="Bypass overhead", color="#B279A2", alpha=0.9)
+        plt.bar(x + width / 2, browser_values, width, label="Browser-data overhead", color="#72B7B2", alpha=0.9)
+        plt.title("Timing Overhead (Full Test - Navigation)", fontsize=16)
+        plt.ylabel("ms", fontsize=12)
+        plt.xticks(x, pivot_df.index.tolist(), rotation=45, ha="right", fontsize=10)
+        plt.legend(loc="upper left", fontsize=9)
+        plt.grid(axis="y", **report_settings.colors.grid_style)
+        plt.tight_layout()
+        plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+        plt.close('all')
+        images["timing_overhead_image"] = image_path
+
+    return images
+
+
 def generate_recaptcha_score_image(df: pd.DataFrame, output_dir: str) -> str:
     """
     Generate image for Recaptcha scores
@@ -464,9 +750,23 @@ def _create_protection_heatmap_subplot(df: pd.DataFrame, engines: List[str]) -> 
         heatmap_data = heatmap_data.reindex(engines)
         heatmap_data = heatmap_data.astype(float)
 
-    sns.heatmap(heatmap_data, annot=True, cmap="RdYlGn", vmin=0, vmax=1,
-                fmt=".2f", linewidths=0.5, cbar_kws={"shrink": 0.8})
+    n_rows = len(heatmap_data.index)
+    n_cols = len(heatmap_data.columns)
+    show_annot = (n_rows * n_cols) <= 120
+
+    sns.heatmap(
+        heatmap_data,
+        annot=show_annot,
+        cmap="RdYlGn",
+        vmin=0,
+        vmax=1,
+        fmt=".2f",
+        linewidths=0.5,
+        cbar_kws={"shrink": 0.8},
+    )
     plt.title("Bypass Rate by Protection Type", fontsize=16)
+    plt.xticks(rotation=45, ha="right", fontsize=9)
+    plt.yticks(fontsize=8)
     plt.tight_layout()
 
 

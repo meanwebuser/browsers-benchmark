@@ -7,5 +7,8 @@
   "dependencies": {
     "@ulixee/hero-playground": "^2.0.0-alpha.45",
     "playwright-core": "^1.52.0"
+  },
+  "overrides": {
+    "better-sqlite3": "12.6.2"
   }
 }
