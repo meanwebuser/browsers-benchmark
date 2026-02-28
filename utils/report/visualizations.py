@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Dict, List, Any
 
@@ -36,6 +37,46 @@ def _resolve_fingerprint_trust_column(df: pd.DataFrame) -> str | None:
     if "fingerprint_trust_score" in df.columns:
         return "fingerprint_trust_score"
     return None
+
+
+def _resolve_fingerprint_suspect_column(df: pd.DataFrame) -> str | None:
+    if "suspect_score" in df.columns:
+        return "suspect_score"
+    if "fingerprint_bot_score" in df.columns:
+        return "fingerprint_bot_score"
+    return None
+
+
+def _collect_bool_values(payload: Any) -> list[bool]:
+    values: list[bool] = []
+    stack = [payload]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, dict):
+            stack.extend(current.values())
+        elif isinstance(current, list):
+            stack.extend(current)
+        elif isinstance(current, bool):
+            values.append(current)
+    return values
+
+
+def _load_deviceandbrowserinfo_signal_ratio(file_path: Any) -> float | None:
+    path = str(file_path or "").strip()
+    if not path or not os.path.isfile(path):
+        return None
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception:
+        return None
+
+    details_payload = payload.get("details") if isinstance(payload, dict) else None
+    bool_values = _collect_bool_values(details_payload if details_payload is not None else payload)
+    if not bool_values:
+        return None
+    return (sum(1 for value in bool_values if value) / len(bool_values)) * 100.0
 
 
 def _target_df(df: pd.DataFrame, target_name: str) -> pd.DataFrame:
@@ -234,10 +275,10 @@ def generate_incolumitas_image(df: pd.DataFrame, output_dir: str) -> str:
 
 def generate_deviceandbrowserinfo_image(df: pd.DataFrame, output_dir: str) -> str:
     plt.figure(figsize=report_settings.visualization.figure_size_medium)
-    plt.title("DeviceAndBrowserInfo Bot Detection Rate", fontsize=16)
+    plt.title("DeviceAndBrowserInfo Suspect Signals Rate", fontsize=16)
 
     target_df = _target_df(df, "deviceandbrowserinfo")
-    if target_df.empty or "deviceandbrowserinfo_is_bot" not in target_df.columns:
+    if target_df.empty:
         plt.text(0.5, 0.5, "No DeviceAndBrowserInfo data available",
                  ha='center', va='center', fontsize=16)
         image_path = os.path.join(output_dir, report_settings.filenames.deviceandbrowserinfo)
@@ -245,25 +286,36 @@ def generate_deviceandbrowserinfo_image(df: pd.DataFrame, output_dir: str) -> st
         plt.close('all')
         return image_path
 
-    target_df["is_bot_numeric"] = pd.to_numeric(target_df["deviceandbrowserinfo_is_bot"], errors="coerce")
-    bot_rate = target_df.groupby("engine")["is_bot_numeric"].mean().mul(100).reset_index()
-    bot_rate = bot_rate.dropna(subset=["is_bot_numeric"]).sort_values("is_bot_numeric", ascending=False)
+    if "deviceandbrowserinfo_file" in target_df.columns:
+        target_df["suspect_signal_rate"] = target_df["deviceandbrowserinfo_file"].apply(
+            _load_deviceandbrowserinfo_signal_ratio
+        )
+    else:
+        target_df["suspect_signal_rate"] = np.nan
+
+    # Fallback to precomputed metric when raw file path is unavailable.
+    if "deviceandbrowserinfo_suspect_score" in target_df.columns:
+        fallback_score = pd.to_numeric(target_df["deviceandbrowserinfo_suspect_score"], errors="coerce")
+        target_df["suspect_signal_rate"] = target_df["suspect_signal_rate"].fillna(fallback_score)
+
+    bot_rate = target_df.groupby("engine")["suspect_signal_rate"].mean().reset_index()
+    bot_rate = bot_rate.dropna(subset=["suspect_signal_rate"]).sort_values("suspect_signal_rate", ascending=False)
 
     if bot_rate.empty:
-        plt.text(0.5, 0.5, "No DeviceAndBrowserInfo bot verdict data available",
+        plt.text(0.5, 0.5, "No DeviceAndBrowserInfo signal data available",
                  ha='center', va='center', fontsize=16)
         image_path = os.path.join(output_dir, report_settings.filenames.deviceandbrowserinfo)
         plt.savefig(image_path, dpi=report_settings.visualization.dpi)
         plt.close('all')
         return image_path
 
-    sns.barplot(x="engine", y="is_bot_numeric", hue="engine", data=bot_rate, palette="viridis", legend=False)
+    sns.barplot(x="engine", y="suspect_signal_rate", hue="engine", data=bot_rate, palette="viridis", legend=False)
     plt.xticks(rotation=45, ha="right", fontsize=10)
-    plt.ylabel("Detected as Bot (%)", fontsize=12)
+    plt.ylabel("True Signals / All Signals (%)", fontsize=12)
     plt.ylim(0, 105)
     plt.grid(axis="y", **report_settings.colors.grid_style)
 
-    for i, v in enumerate(bot_rate["is_bot_numeric"]):
+    for i, v in enumerate(bot_rate["suspect_signal_rate"]):
         plt.text(i, v + 1.5, f"{v:.1f}%", ha='center', va='bottom', fontsize=9)
 
     image_path = os.path.join(output_dir, report_settings.filenames.deviceandbrowserinfo)
@@ -273,36 +325,36 @@ def generate_deviceandbrowserinfo_image(df: pd.DataFrame, output_dir: str) -> st
     return image_path
 
 
-def generate_fingerprint_scan_image(df: pd.DataFrame, output_dir: str) -> str:
+def generate_scan_fingerprint_image(df: pd.DataFrame, output_dir: str) -> str:
     plt.figure(figsize=report_settings.visualization.figure_size_medium)
     plt.title("Fingerprint Scan Bot Risk Score by Browser", fontsize=16)
 
-    target_df = _target_df(df, "fingerprint_scan")
-    if target_df.empty or "fingerprint_scan_bot_risk_score" not in target_df.columns:
+    target_df = _target_df(df, "scan_fingerprint")
+    if target_df.empty or "scan_fingerprint_bot_risk_score" not in target_df.columns:
         plt.text(0.5, 0.5, "No Fingerprint Scan data available",
                  ha='center', va='center', fontsize=16)
-        image_path = os.path.join(output_dir, report_settings.filenames.fingerprint_scan)
+        image_path = os.path.join(output_dir, report_settings.filenames.scan_fingerprint)
         plt.savefig(image_path, dpi=report_settings.visualization.dpi)
         plt.close('all')
         return image_path
 
-    target_df["fingerprint_scan_bot_risk_score"] = pd.to_numeric(
-        target_df["fingerprint_scan_bot_risk_score"], errors="coerce"
+    target_df["scan_fingerprint_bot_risk_score"] = pd.to_numeric(
+        target_df["scan_fingerprint_bot_risk_score"], errors="coerce"
     )
-    score_data = target_df.groupby("engine")["fingerprint_scan_bot_risk_score"].mean().reset_index()
-    score_data = score_data.dropna(subset=["fingerprint_scan_bot_risk_score"]).sort_values(
-        "fingerprint_scan_bot_risk_score", ascending=True
+    score_data = target_df.groupby("engine")["scan_fingerprint_bot_risk_score"].mean().reset_index()
+    score_data = score_data.dropna(subset=["scan_fingerprint_bot_risk_score"]).sort_values(
+        "scan_fingerprint_bot_risk_score", ascending=True
     )
 
     if score_data.empty:
         plt.text(0.5, 0.5, "No Fingerprint Scan bot risk score data available",
                  ha='center', va='center', fontsize=16)
-        image_path = os.path.join(output_dir, report_settings.filenames.fingerprint_scan)
+        image_path = os.path.join(output_dir, report_settings.filenames.scan_fingerprint)
         plt.savefig(image_path, dpi=report_settings.visualization.dpi)
         plt.close('all')
         return image_path
 
-    sns.barplot(x="engine", y="fingerprint_scan_bot_risk_score", hue="engine",
+    sns.barplot(x="engine", y="scan_fingerprint_bot_risk_score", hue="engine",
                 data=score_data, palette="viridis", legend=False)
     plt.xticks(rotation=45, ha="right", fontsize=10)
     plt.ylabel("Bot Risk Score (0-100, lower is better)", fontsize=12)
@@ -312,10 +364,10 @@ def generate_fingerprint_scan_image(df: pd.DataFrame, output_dir: str) -> str:
     plt.axhline(y=70, color='red', linestyle='--', alpha=0.5, label="Higher Risk Zone")
     plt.legend(loc="upper right", fontsize=9)
 
-    for i, v in enumerate(score_data["fingerprint_scan_bot_risk_score"]):
+    for i, v in enumerate(score_data["scan_fingerprint_bot_risk_score"]):
         plt.text(i, v + 1.5, f"{v:.1f}", ha='center', va='bottom', fontsize=9)
 
-    image_path = os.path.join(output_dir, report_settings.filenames.fingerprint_scan)
+    image_path = os.path.join(output_dir, report_settings.filenames.scan_fingerprint)
     plt.tight_layout()
     plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
     plt.close('all')
@@ -503,8 +555,13 @@ def _create_fingerprint_plot(fingerprint_df: pd.DataFrame) -> None:
     trust_col = _resolve_fingerprint_trust_column(fingerprint_df)
     if trust_col is None:
         return
+    suspect_col = _resolve_fingerprint_suspect_column(fingerprint_df)
+    if suspect_col is None:
+        fingerprint_df = fingerprint_df.copy()
+        fingerprint_df["suspect_score"] = np.nan
+        suspect_col = "suspect_score"
 
-    fingerprint_data = fingerprint_df.groupby("engine")[[trust_col, "fingerprint_bot_score"]].mean().reset_index()
+    fingerprint_data = fingerprint_df.groupby("engine")[[trust_col, suspect_col]].mean().reset_index()
     fingerprint_data = fingerprint_data.sort_values(trust_col, ascending=False)
 
     x = np.arange(len(fingerprint_data))
@@ -512,8 +569,8 @@ def _create_fingerprint_plot(fingerprint_df: pd.DataFrame) -> None:
 
     bar1 = plt.bar(x - width / 2, fingerprint_data[trust_col], width,
                    label="Trust Score (higher is better)", color=report_settings.colors.success)
-    bar2 = plt.bar(x + width / 2, fingerprint_data["fingerprint_bot_score"], width,
-                   label="Bot Score (lower is better)", color=report_settings.colors.failure)
+    bar2 = plt.bar(x + width / 2, fingerprint_data[suspect_col], width,
+                   label="Suspect Score (lower is better)", color=report_settings.colors.failure)
 
     plt.xticks(x, fingerprint_data["engine"].tolist(), rotation=45, ha="right", fontsize=10)
     plt.ylabel("Score (0-100%)", fontsize=12)
@@ -531,7 +588,7 @@ def _create_fingerprint_plot(fingerprint_df: pd.DataFrame) -> None:
     # Value annotations
     for i, bars in enumerate(zip(bar1, bar2)):
         for j, bar in enumerate(bars):
-            value = fingerprint_data.iloc[i][trust_col] if j == 0 else fingerprint_data.iloc[i]["fingerprint_bot_score"]
+            value = fingerprint_data.iloc[i][trust_col] if j == 0 else fingerprint_data.iloc[i][suspect_col]
             plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2,
                      f'{value}%', ha='center', va='bottom', fontsize=9)
 
@@ -560,5 +617,5 @@ def _add_fingerprint_note() -> None:
     """Explanatory note for Fingerprint plot"""
 
     plt.figtext(0.5, 0.01,
-                "Higher trust score = better fingerprinting protection\nLower bot score = less bot-like behavior",
+                "Higher trust score = better fingerprinting protection\nLower suspect score = less bot-like behavior",
                 ha='center', fontsize=10, style='italic')

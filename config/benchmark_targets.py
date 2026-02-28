@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from utils.targets.browser_data.deviceandbrowserinfo import extract_deviceandbrowserinfo_data
 from utils.targets.browser_data.fingerprint_demo import extract_fingerprint_demo_data
-from utils.targets.browser_data.fingerprint_scan import extract_fingerprint_scan_data
+from utils.targets.browser_data.scan_fingerprint import extract_scan_fingerprint_data
 from utils.targets.browser_data.incolumitas import extract_incolumitas_data
 from utils.targets.browser_data.ipify import extract_ipify_data
 from utils.targets.browser_data.recaptcha_score import extract_recaptcha_score
@@ -146,12 +146,6 @@ class BrowserDataTargetsSettings(BaseModel):
                 description="Fingerprint.com Browser Smart Signals extraction"
             ),
             Target(
-                name="ipify",
-                url="https://api.ipify.org?format=json",
-                check_function="extract_ipify_data",
-                description="IP information extraction"
-            ),
-            Target(
                 name="incolumitas",
                 url="https://bot.incolumitas.com/#browserData",
                 check_function="extract_incolumitas_data",
@@ -164,9 +158,9 @@ class BrowserDataTargetsSettings(BaseModel):
                 description="DeviceAndBrowserInfo 'Are you a bot' extraction"
             ),
             Target(
-                name="fingerprint_scan",
+                name="scan_fingerprint",
                 url="https://fingerprint-scan.com/",
-                check_function="extract_fingerprint_scan_data",
+                check_function="extract_scan_fingerprint_data",
                 description="Fingerprint Scan bot risk score extraction"
             )
         ]
@@ -179,7 +173,7 @@ class BrowserDataTargetsSettings(BaseModel):
             "extract_ipify_data": extract_ipify_data,
             "extract_incolumitas_data": extract_incolumitas_data,
             "extract_deviceandbrowserinfo_data": extract_deviceandbrowserinfo_data,
-            "extract_fingerprint_scan_data": extract_fingerprint_scan_data
+            "extract_scan_fingerprint_data": extract_scan_fingerprint_data
         }
     )
 

@@ -13,7 +13,7 @@ from .visualizations import (
     generate_fingerprint_demo_image,
     generate_incolumitas_image,
     generate_deviceandbrowserinfo_image,
-    generate_fingerprint_scan_image,
+    generate_scan_fingerprint_image,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,5 +86,5 @@ def _generate_all_visualizations(bypass_df, browser_data_df, media_output_dir: s
         "fingerprint_demo_image": generate_fingerprint_demo_image(browser_data_df, media_output_dir),
         "incolumitas_image": generate_incolumitas_image(browser_data_df, media_output_dir),
         "deviceandbrowserinfo_image": generate_deviceandbrowserinfo_image(browser_data_df, media_output_dir),
-        "fingerprint_scan_image": generate_fingerprint_scan_image(browser_data_df, media_output_dir),
+        "scan_fingerprint_image": generate_scan_fingerprint_image(browser_data_df, media_output_dir),
     }

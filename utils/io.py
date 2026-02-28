@@ -61,7 +61,7 @@ def save_results(results: BenchmarkResults, result_path: str) -> str:
                 "url": r.url,
                 "error": r.error,
                 "fingerprint_untrust_score": r.fingerprint_untrust_score,
-                "fingerprint_bot_score": r.fingerprint_bot_score,
+                "suspect_score": r.suspect_score,
                 "fingerprint_webrtc_ip": r.fingerprint_webrtc_ip,
                 "fingerprint_demo_file": r.fingerprint_demo_file,
                 "recaptcha_score": r.recaptcha_score,
@@ -69,7 +69,8 @@ def save_results(results: BenchmarkResults, result_path: str) -> str:
                 "incolumitas_file": r.incolumitas_file,
                 "deviceandbrowserinfo_is_bot": r.deviceandbrowserinfo_is_bot,
                 "deviceandbrowserinfo_file": r.deviceandbrowserinfo_file,
-                "fingerprint_scan_bot_risk_score": r.fingerprint_scan_bot_risk_score
+                "deviceandbrowserinfo_suspect_score": r.deviceandbrowserinfo_suspect_score,
+                "scan_fingerprint_bot_risk_score": r.scan_fingerprint_bot_risk_score
             } for r in results.browser_data_targets_results
         ],
         "average_memory_mb": results.average_memory_mb,

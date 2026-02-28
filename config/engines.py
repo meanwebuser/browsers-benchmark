@@ -21,6 +21,7 @@ from utils.user_agent import generate_user_agent
 STEALTH_INIT_SCRIPTS = ["stealth_improved.js"]
 ALLOWED_ENGINE_STEALTH_MODES = {"no_stealth", "use_stealth", "both"}
 ALLOWED_ENGINE_USER_AGENT_MODES = {"random", "native"}
+ALLOWED_ENGINES_TO_TEST_MODES = {"headless", "headed", "both"}
 
 
 def resolve_mode(value: str, allowed: Set[str], default: str) -> str:
@@ -66,6 +67,11 @@ class EnginesSettings(BaseSettings):
             settings.ENGINE_USER_AGENT_MODE,
             ALLOWED_ENGINE_USER_AGENT_MODES,
             "random",
+        )
+        ENGINES_TO_TEST_MODE = resolve_mode(
+            settings.browser.mode,
+            ALLOWED_ENGINES_TO_TEST_MODES,
+            "both",
         )
 
         def should_include_stealth_variant(has_stealth: bool) -> bool:
@@ -225,6 +231,14 @@ class EnginesSettings(BaseSettings):
         else:
             for engine in engine_variants:
                 engine.setdefault("params", {})
+
+        if ENGINES_TO_TEST_MODE != "both":
+            require_headless = ENGINES_TO_TEST_MODE == "headless"
+            engine_variants = [
+                engine
+                for engine in engine_variants
+                if engine.get("params", {}).get("headless", False) is require_headless
+            ]
 
         has_display = bool(
             os.environ.get("DISPLAY")

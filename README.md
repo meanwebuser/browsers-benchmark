@@ -246,6 +246,8 @@ PROXY_MAX_RETRIES=3
 # Performance Settings
 PAGE_LOAD_TIMEOUT_S=90
 PAGE_STABILIZATION_DELAY_S=5
+ENGINES_TO_TEST_MODE=both
+BROWSER_TRY_HEADED_WITHOUT_DISPLAY=false
 NUM_WORKERS_MIN=1
 NUM_WORKERS_MAX=10
 BENCHMARK_REPEAT_COUNT=1
@@ -285,7 +287,7 @@ python build_overall_score.py --cpu-count 16 --ram-gb 64
 Limit scoring to specific targets:
 
 ```bash
-python build_overall_score.py --sites google_search cloudflare_protected recaptcha_score fingerprint_scan
+python build_overall_score.py --sites google_search cloudflare_protected recaptcha_score scan_fingerprint
 ```
 
 Save computed axes as JSON:

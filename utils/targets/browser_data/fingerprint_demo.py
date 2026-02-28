@@ -189,7 +189,7 @@ async def extract_fingerprint_demo_data(engine: BrowserEngine) -> dict:
     return {
         # Keep existing report pipeline fields for compatibility.
         "fingerprint_untrust_score": score if score is not None else 0,
-        "fingerprint_bot_score": 0,
+        "suspect_score": 0,
         "fingerprint_webrtc_ip": "",
         "fingerprint_demo_file": file_path,
     }

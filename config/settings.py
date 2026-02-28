@@ -14,7 +14,7 @@ class ProxySettings(BaseModel):
     test_timeout: int = 10
     debug_verify_usage: bool = False
     lock_stale_s: int = 3600
-    max_retries: int = 3  # maximum number of proxy fallback attempts
+    max_retries: int = 3  # maximum number of proxy fallback attempts (0 = unlimited)
 
     model_config = {"extra": "ignore"}
 
@@ -46,7 +46,7 @@ class BrowserSettings(BaseModel):
     action_timeout_s: int = 60  # maximum time to wait for actions like search of elements, screenshots, clicks, etc.
     page_load_timeout_s: int = 60  # maximum time to wait for page load in seconds
     page_stabilization_delay_s: int = 5  # time to wait for page stabilization after navigation
-    headless: bool = True
+    mode: str = "both"  # one of 'headless', 'headed', 'both'
     try_headed_without_display: bool = False
 
     model_config = {"extra": "ignore"}
@@ -63,13 +63,13 @@ class Settings(BaseSettings):
     PROXY_TEST_TIMEOUT: int = 10
     PROXY_DEBUG_VERIFY_USAGE: bool = False
     PROXY_LOCK_STALE_S: int = 3600
-    PROXY_MAX_RETRIES: int = 3
+    PROXY_MAX_RETRIES: int = 3  # 0 = unlimited proxy fallback retries
 
     # browser
     ACTION_TIMEOUT_S: int = 30  # maximum time to wait for actions like search of elements, screenshots, clicks, etc.
     PAGE_LOAD_TIMEOUT_S: int = 90  # maximum time to wait for page load in seconds
     PAGE_STABILIZATION_DELAY_S: int = 5  # time to wait for page stabilization after navigation
-    BROWSER_HEADLESS: bool = True  # run browser in headless mode
+    ENGINES_TO_TEST_MODE: str = "both"  # one of 'headless', 'headed', 'both'
     BROWSER_TRY_HEADED_WITHOUT_DISPLAY: bool = False
     ENGINE_STEALTH_MODE: str = "both"  # one of 'no_stealth', 'use_stealth', 'both'
     ENGINE_USER_AGENT_MODE: str = "random"  # one of 'random', 'native'
@@ -121,7 +121,7 @@ class Settings(BaseSettings):
             action_timeout_s=self.ACTION_TIMEOUT_S,
             page_load_timeout_s=self.PAGE_LOAD_TIMEOUT_S,
             page_stabilization_delay_s=self.PAGE_STABILIZATION_DELAY_S,
-            headless=self.BROWSER_HEADLESS,
+            mode=self.ENGINES_TO_TEST_MODE,
             try_headed_without_display=self.BROWSER_TRY_HEADED_WITHOUT_DISPLAY
         )
 

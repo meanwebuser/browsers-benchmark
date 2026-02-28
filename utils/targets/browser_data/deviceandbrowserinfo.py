@@ -28,6 +28,20 @@ def _save_payload(engine: BrowserEngine, payload: dict[str, Any]) -> str:
     return output_path
 
 
+def _collect_bool_values(payload: Any) -> list[bool]:
+    values: list[bool] = []
+    stack = [payload]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, dict):
+            stack.extend(current.values())
+        elif isinstance(current, list):
+            stack.extend(current)
+        elif isinstance(current, bool):
+            values.append(current)
+    return values
+
+
 async def extract_deviceandbrowserinfo_data(engine: BrowserEngine) -> dict:
     """
     Extract bot detection JSON from deviceandbrowserinfo.com/are_you_a_bot.
@@ -63,9 +77,22 @@ return (code.textContent || '').trim();
         payload = {"raw": raw_text}
 
     file_path = _save_payload(engine, payload)
-    is_bot = payload.get("isBot") if isinstance(payload, dict) else None
+
+    details_payload = payload.get("details") if isinstance(payload, dict) else None
+    bool_values = _collect_bool_values(details_payload if details_payload is not None else payload)
+    total_signals = len(bool_values)
+    true_signals = sum(1 for value in bool_values if value)
+
+    derived_is_bot = any(bool_values) if bool_values else None
+    fallback_is_bot = payload.get("isBot") if isinstance(payload, dict) else None
+    is_bot = derived_is_bot if derived_is_bot is not None else fallback_is_bot
+
+    suspect_score = None
+    if total_signals > 0:
+        suspect_score = (true_signals / total_signals) * 100.0
 
     return {
         "deviceandbrowserinfo_is_bot": bool(is_bot) if is_bot is not None else None,
         "deviceandbrowserinfo_file": file_path,
+        "deviceandbrowserinfo_suspect_score": suspect_score,
     }

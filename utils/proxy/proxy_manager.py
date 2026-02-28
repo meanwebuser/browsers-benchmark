@@ -871,10 +871,14 @@ async def handle_proxy_fallback(
         return None, str(original_error)
 
     supported_protocols = getattr(engine, "supported_proxy_protocols", ["http", "https"])
-    max_proxy_retries = max(1, int(settings.proxy.max_retries))
+    configured_proxy_retries = int(settings.proxy.max_retries)
+    unlimited_proxy_retries = configured_proxy_retries == 0
+    max_proxy_retries = max(1, configured_proxy_retries) if not unlimited_proxy_retries else None
     attempt_errors: List[str] = []
-
-    for attempt in range(1, max_proxy_retries + 1):
+    attempt = 0
+    while unlimited_proxy_retries or (max_proxy_retries is not None and attempt < max_proxy_retries):
+        attempt += 1
+        attempt_label = f"{attempt}/unlimited" if unlimited_proxy_retries else f"{attempt}/{max_proxy_retries}"
         fallback_proxy = await proxy_manager_instance.aget_fallback_proxy_by_protocol(
             supported_protocols,
             failed_proxy=None,
@@ -882,16 +886,24 @@ async def handle_proxy_fallback(
             error_message=str(original_error),
         )
         if not fallback_proxy:
+            if unlimited_proxy_retries:
+                logger.warning(
+                    f"No compatible fallback proxy available for {target_name} "
+                    f"(supports: {supported_protocols}) on attempt {attempt_label}; retrying in 2s"
+                )
+                await asyncio.sleep(2)
+                continue
+
             logger.error(
                 f"No compatible fallback proxy available for {target_name} "
-                f"(supports: {supported_protocols}) on attempt {attempt}/{max_proxy_retries}"
+                f"(supports: {supported_protocols}) on attempt {attempt_label}"
             )
             break
 
         logger.info(
             f"Retrying {target_name} with fallback {fallback_proxy['protocol']} "
             f"proxy {fallback_proxy.get('host')}:{fallback_proxy.get('port')} "
-            f"(attempt {attempt}/{max_proxy_retries})"
+            f"(attempt {attempt_label})"
         )
 
         try:
@@ -917,7 +929,7 @@ async def handle_proxy_fallback(
             )
             logger.error(
                 f"Fallback proxy failed for {target_name} "
-                f"(attempt {attempt}/{max_proxy_retries}): {fallback_error}"
+                f"(attempt {attempt_label}): {fallback_error}"
             )
 
     suffix = f", Fallbacks: {' | '.join(attempt_errors)}" if attempt_errors else ""

@@ -67,7 +67,7 @@ class FilenameSettings(BaseModel):
     fingerprint_demo: str = "fingerprint_demo.png"
     incolumitas: str = "incolumitas.png"
     deviceandbrowserinfo: str = "deviceandbrowserinfo.png"
-    fingerprint_scan: str = "fingerprint_scan.png"
+    scan_fingerprint: str = "scan_fingerprint.png"
     summary: str = "summary.md"
 
     model_config = {"extra": "ignore"}
@@ -102,7 +102,7 @@ class ReportSettings(BaseSettings):
     FINGERPRINT_DEMO_FILENAME: str = "fingerprint_demo.png"
     INCOLUMITAS_FILENAME: str = "incolumitas.png"
     DEVICEANDBROWSERINFO_FILENAME: str = "deviceandbrowserinfo.png"
-    FINGERPRINT_SCAN_FILENAME: str = "fingerprint_scan.png"
+    scan_fingerprint_FILENAME: str = "scan_fingerprint.png"
     SUMMARY_FILENAME: str = "summary.md"
 
     @property
@@ -148,7 +148,7 @@ class ReportSettings(BaseSettings):
             fingerprint_demo=self.FINGERPRINT_DEMO_FILENAME,
             incolumitas=self.INCOLUMITAS_FILENAME,
             deviceandbrowserinfo=self.DEVICEANDBROWSERINFO_FILENAME,
-            fingerprint_scan=self.FINGERPRINT_SCAN_FILENAME,
+            scan_fingerprint=self.scan_fingerprint_FILENAME,
             summary=self.SUMMARY_FILENAME
         )
 

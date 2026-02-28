@@ -33,7 +33,7 @@ class BrowserDataResult:
     error: Optional[str] = None
     # Fingerprint data
     fingerprint_untrust_score: Optional[float] = None
-    fingerprint_bot_score: Optional[float] = None
+    suspect_score: Optional[float] = None
     fingerprint_webrtc_ip: Optional[str] = None
     # fingerprint.com demo raw payload file
     fingerprint_demo_file: Optional[str] = None
@@ -46,8 +46,9 @@ class BrowserDataResult:
     # deviceandbrowserinfo results
     deviceandbrowserinfo_is_bot: Optional[bool] = None
     deviceandbrowserinfo_file: Optional[str] = None
+    deviceandbrowserinfo_suspect_score: Optional[float] = None
     # fingerprint-scan score
-    fingerprint_scan_bot_risk_score: Optional[int] = None
+    scan_fingerprint_bot_risk_score: Optional[int] = None
 
 
 @dataclass

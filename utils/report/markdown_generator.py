@@ -134,9 +134,14 @@ def _write_fingerprint_section(f, browser_data_df: pd.DataFrame) -> None:
         f.write("*No Fingerprint demo data available*\n\n")
         return
 
+    suspect_col = "suspect_score" if "suspect_score" in browser_data_df.columns else "fingerprint_bot_score"
+    if suspect_col not in browser_data_df.columns:
+        browser_data_df = browser_data_df.copy()
+        browser_data_df[suspect_col] = pd.NA
+
     # calculate the metrics
     fingerprint_numeric_data = browser_data_df.groupby("engine")[
-        ["fingerprint_untrust_score", "fingerprint_bot_score"]].mean().reset_index()
+        ["fingerprint_untrust_score", suspect_col]].mean().reset_index()
 
     if fingerprint_numeric_data.empty:
         f.write("*No Fingerprint demo data available*\n\n")
@@ -166,12 +171,12 @@ def _write_fingerprint_section(f, browser_data_df: pd.DataFrame) -> None:
         fingerprint_data = pd.merge(fingerprint_data, fingerprint_file_data, on="engine", how="left")
     fingerprint_data = fingerprint_data.sort_values("fingerprint_untrust_score", ascending=False)
 
-    f.write("| Engine | Browser Smart Signals Score | Bot Score (%) | Raw File |\n")
+    f.write("| Engine | Browser Smart Signals Score | Suspect Score (%) | Raw File |\n")
     f.write("|-----------------|----------------:|--------------:|----------:|\n")
     for _, row in fingerprint_data.iterrows():
         f.write(f"| {row['engine']} "
                 f"| {row['fingerprint_untrust_score']:.2f} "
-                f"| {row['fingerprint_bot_score']:.2f} "
+                f"| {row[suspect_col]:.2f} "
                 f"| {row.get('fingerprint_demo_file', '') or row['fingerprint_webrtc_ip']} |\n")
 
     f.write('\n\n')
@@ -436,10 +441,10 @@ def _write_visualization_sections(f, image_paths: Dict[str, str]) -> None:
     else:
         f.write("*No DeviceAndBrowserInfo image available*\n\n")
 
-    # fingerprint_scan visualization
+    # scan_fingerprint visualization
     f.write("## Fingerprint Scan Visualization\n\n")
-    if "fingerprint_scan_image" in image_paths and image_paths["fingerprint_scan_image"]:
+    if "scan_fingerprint_image" in image_paths and image_paths["scan_fingerprint_image"]:
         f.write(
-            f"![Fingerprint Scan]({os.path.join(settings.paths.media_dir, os.path.basename(image_paths['fingerprint_scan_image']))})\n\n")
+            f"![Fingerprint Scan]({os.path.join(settings.paths.media_dir, os.path.basename(image_paths['scan_fingerprint_image']))})\n\n")
     else:
         f.write("*No Fingerprint Scan image available*\n\n")

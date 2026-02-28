@@ -124,22 +124,22 @@ def _extract_bot_signals(browser_rows: list[dict[str, Any]]) -> list[float]:
         if recaptcha is not None:
             signals.append(recaptcha)
 
-        for key in ("fingerprint_bot_score", "creepjs_bot_score"):
+        for key in ("fingerprint_bot_score"):
             bot_prob = _normalize_unit_or_percent(row.get(key))
             if bot_prob is not None:
                 signals.append(1.0 - bot_prob)
 
-        for key in ("fingerprint_scan_bot_risk_score",):
+        for key in ("scan_fingerprint_bot_risk_score",):
             bot_risk = _normalize_unit_or_percent(row.get(key))
             if bot_risk is not None:
                 signals.append(1.0 - bot_risk)
 
-        for key in ("fingerprint_untrust_score", "creepjs_untrust_score"):
+        for key in ("fingerprint_untrust_score"):
             untrust = _normalize_unit_or_percent(row.get(key))
             if untrust is not None:
                 signals.append(1.0 - untrust)
 
-        for key in ("creepjs_trust_score", "fingerprint_trust_score"):
+        for key in ( "fingerprint_trust_score"):
             trust = _normalize_unit_or_percent(row.get(key))
             if trust is not None:
                 signals.append(trust)
@@ -366,7 +366,7 @@ def main() -> None:
         nargs="+",
         help=(
             "Only include selected target names in scoring "
-            "(e.g. google_search recaptcha_score fingerprint_scan). Default: all sites"
+            "(e.g. google_search recaptcha_score scan_fingerprint). Default: all sites"
         ),
     )
     parser.add_argument(
