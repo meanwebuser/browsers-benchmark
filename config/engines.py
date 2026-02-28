@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings
 
 from config.settings import settings
 from engines.hero.ulixee_hero_engine import UlixeeHeroEngine
+from engines.node.node_playwright_engine import NodePlaywrightEngine
 from engines.nodriver.nodriver_engine import NoDriverEngine
 from engines.nodriver.seleniumbase_engine import SeleniumbaseEngine
 from engines.nodriver.zendriver_engine import ZenDriverEngine
@@ -181,6 +182,15 @@ class EnginesSettings(BaseSettings):
             {
                 "class": UlixeeHeroEngine,
                 "params": {"headless": True, "name": "ulixee-hero_headless"}
+            },
+            {
+                "class": NodePlaywrightEngine,
+                "params": {
+                    "headless": True,
+                    "name": "node-playwright-chromium_headless",
+                    "browser_type": "chromium",
+                    "use_system_chrome": True,
+                }
             }
         ]
 

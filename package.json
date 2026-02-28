@@ -5,6 +5,7 @@
     "improved_stealth": "bash ./scripts/obfuscate_improved_stealth.sh"
   },
   "dependencies": {
-    "@ulixee/hero-playground": "^2.0.0-alpha.45"
+    "@ulixee/hero-playground": "^2.0.0-alpha.45",
+    "playwright-core": "^1.52.0"
   }
 }

@@ -46,6 +46,7 @@ Modern web applications use advanced bot detection like Cloudflare, DataDome, an
 - <a href="https://seleniumbase.io/">**Seleniumbase**</a> - Open-source professional toolkit for web automation activities
 - <a href="https://github.com/ultrafunkamsterdam/nodriver">**NoDriver**</a> - Open-source browser automation framework (supports only SOCKS5 proxies)
 - <a href="https://github.com/cdpdriver/zendriver">**ZenDriver**</a> - NoDriver-based
+- <a href="https://playwright.dev/docs/intro#using-playwright-in-javascript--typescript">**Node Playwright**</a> - Node.js Playwright worker-based engine
 - <i>More engines coming soon. What engine should I add next?</i>
 
 ### Analytics
@@ -262,6 +263,36 @@ The benchmark generates reports in the `results/` directory:
   - `recaptcha_scores.png` - reCAPTCHA performance chart
   - `creepjs_scores.png` - Fingerprinting resistance analysis
   - `screenshots` - Screenshots of all tested targets
+
+### Privacy vs Performance Score Helper
+
+Use `build_overall_score.py` to calculate two axes per engine from `benchmark_results.json`:
+- **Privacy score**: combines bypass rate and bot-detection signals.
+- **Performance score**: based on estimated parallel browser instances and page startup speed (`windows/hour`).
+
+By default, it picks the latest valid run from `results/`:
+
+```bash
+python build_overall_score.py
+```
+
+Use custom hardware limits (optional):
+
+```bash
+python build_overall_score.py --cpu-count 16 --ram-gb 64
+```
+
+Limit scoring to specific targets:
+
+```bash
+python build_overall_score.py --sites google_search cloudflare_protected recaptcha_score fingerprint_scan
+```
+
+Save computed axes as JSON:
+
+```bash
+python build_overall_score.py --output-file results/overall_axes.json
+```
 
 ## 🏗️ Architecture
 
