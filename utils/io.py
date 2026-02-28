@@ -49,6 +49,7 @@ def save_results(results: BenchmarkResults, result_path: str) -> str:
                 "bypass": r.bypass,
                 "error": r.error,
                 "load_time_ms": r.performance.load_time_ms,
+                "test_duration_ms": r.performance.test_duration_ms,
                 "memory_mb": r.performance.memory_mb,
                 "cpu_percent": r.performance.cpu_percent,
                 "peak_rss_mb": r.performance.peak_rss_mb,
@@ -60,6 +61,8 @@ def save_results(results: BenchmarkResults, result_path: str) -> str:
                 "target": r.target,
                 "url": r.url,
                 "error": r.error,
+                "navigation_time_ms": r.navigation_time_ms,
+                "test_duration_ms": r.test_duration_ms,
                 "fingerprint_untrust_score": r.fingerprint_untrust_score,
                 "suspect_score": r.suspect_score,
                 "fingerprint_webrtc_ip": r.fingerprint_webrtc_ip,
@@ -73,8 +76,29 @@ def save_results(results: BenchmarkResults, result_path: str) -> str:
                 "scan_fingerprint_bot_risk_score": r.scan_fingerprint_bot_risk_score
             } for r in results.browser_data_targets_results
         ],
+        "startup_time_ms": results.startup_time_ms,
         "average_memory_mb": results.average_memory_mb,
         "average_cpu_percent": results.average_cpu_percent,
+        "memory_mb_stats": {
+            "min": results.memory_mb_stats.min,
+            "mean": results.memory_mb_stats.mean,
+            "max": results.memory_mb_stats.max,
+        },
+        "cpu_percent_stats": {
+            "min": results.cpu_percent_stats.min,
+            "mean": results.cpu_percent_stats.mean,
+            "max": results.cpu_percent_stats.max,
+        },
+        "peak_rss_mb_stats": {
+            "min": results.peak_rss_mb_stats.min,
+            "mean": results.peak_rss_mb_stats.mean,
+            "max": results.peak_rss_mb_stats.max,
+        },
+        "max_cpu_percent_stats": {
+            "min": results.max_cpu_percent_stats.min,
+            "mean": results.max_cpu_percent_stats.mean,
+            "max": results.max_cpu_percent_stats.max,
+        },
         "bypass_rate": results.bypass_rate,
         "error": results.error
     }

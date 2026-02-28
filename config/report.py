@@ -62,6 +62,7 @@ class FilenameSettings(BaseModel):
     """Configuration settings for output filenames"""
 
     bypass_dashboard: str = "bypass_dashboard.png"
+    timings_dashboard: str = "timings_dashboard.png"
     recaptcha_scores: str = "recaptcha_scores.png"
     fingerprint_scores: str = "fingerprint_scores.png"
     fingerprint_demo: str = "fingerprint_demo.png"
@@ -97,6 +98,7 @@ class ReportSettings(BaseSettings):
 
     # output filenames
     BYPASS_DASHBOARD_FILENAME: str = "bypass_dashboard.png"
+    TIMINGS_DASHBOARD_FILENAME: str = "timings_dashboard.png"
     RECAPTCHA_SCORES_FILENAME: str = "recaptcha_scores.png"
     FINGERPRINT_SCORES_FILENAME: str = "fingerprint_scores.png"
     FINGERPRINT_DEMO_FILENAME: str = "fingerprint_demo.png"
@@ -143,6 +145,7 @@ class ReportSettings(BaseSettings):
 
         return FilenameSettings(
             bypass_dashboard=self.BYPASS_DASHBOARD_FILENAME,
+            timings_dashboard=self.TIMINGS_DASHBOARD_FILENAME,
             recaptcha_scores=self.RECAPTCHA_SCORES_FILENAME,
             fingerprint_scores=self.FINGERPRINT_SCORES_FILENAME,
             fingerprint_demo=self.FINGERPRINT_DEMO_FILENAME,

@@ -104,6 +104,10 @@ def _write_recaptcha_section(f, browser_data_df: pd.DataFrame) -> None:
 
     f.write("## Recaptcha Scores\n\n")
 
+    if browser_data_df.empty or "recaptcha_score" not in browser_data_df.columns:
+        f.write("*No reCAPTCHA data available*\n\n")
+        return
+
     recaptcha_data = browser_data_df.groupby("engine")["recaptcha_score"].mean().reset_index()
 
     if recaptcha_data.empty:
@@ -130,18 +134,13 @@ def _write_fingerprint_section(f, browser_data_df: pd.DataFrame) -> None:
 
     f.write("## Fingerprint Demo Scores\n\n")
 
-    if "fingerprint_untrust_score" not in browser_data_df.columns:
-        f.write("*No Fingerprint demo data available*\n\n")
-        return
-
-    suspect_col = "suspect_score" if "suspect_score" in browser_data_df.columns else "fingerprint_bot_score"
+    suspect_col = "suspect_score"
     if suspect_col not in browser_data_df.columns:
         browser_data_df = browser_data_df.copy()
         browser_data_df[suspect_col] = pd.NA
 
     # calculate the metrics
-    fingerprint_numeric_data = browser_data_df.groupby("engine")[
-        ["fingerprint_untrust_score", suspect_col]].mean().reset_index()
+    fingerprint_numeric_data = browser_data_df.groupby("engine")[[suspect_col]].mean().reset_index()
 
     if fingerprint_numeric_data.empty:
         f.write("*No Fingerprint demo data available*\n\n")
@@ -169,13 +168,12 @@ def _write_fingerprint_section(f, browser_data_df: pd.DataFrame) -> None:
     fingerprint_data = pd.merge(fingerprint_numeric_data, fingerprint_webrtc_ip_data, on="engine")
     if fingerprint_file_data is not None:
         fingerprint_data = pd.merge(fingerprint_data, fingerprint_file_data, on="engine", how="left")
-    fingerprint_data = fingerprint_data.sort_values("fingerprint_untrust_score", ascending=False)
+    fingerprint_data = fingerprint_data.sort_values(suspect_col, ascending=False)
 
-    f.write("| Engine | Browser Smart Signals Score | Suspect Score (%) | Raw File |\n")
-    f.write("|-----------------|----------------:|--------------:|----------:|\n")
+    f.write("| Engine | Suspect Score (%) | Raw File |\n")
+    f.write("|-----------------|--------------:|----------:|\n")
     for _, row in fingerprint_data.iterrows():
         f.write(f"| {row['engine']} "
-                f"| {row['fingerprint_untrust_score']:.2f} "
                 f"| {row[suspect_col]:.2f} "
                 f"| {row.get('fingerprint_demo_file', '') or row['fingerprint_webrtc_ip']} |\n")
 
@@ -400,6 +398,15 @@ def _write_visualization_sections(f, image_paths: Dict[str, str]) -> None:
             f"![Bypass Dashboard]({os.path.join(settings.paths.media_dir, os.path.basename(image_paths['bypass_dashboard_image']))})\n\n")
     else:
         f.write("*No dashboard image available*\n\n")
+
+    # timings dashboard
+    f.write("## Timings Dashboard\n\n")
+    if "timings_dashboard_image" in image_paths and image_paths["timings_dashboard_image"]:
+        f.write(
+            f"![Timings Dashboard]({os.path.join(settings.paths.media_dir, os.path.basename(image_paths['timings_dashboard_image']))})\n\n"
+        )
+    else:
+        f.write("*No timings dashboard image available*\n\n")
 
     # recaptcha visualization
     f.write("## Recaptcha Score Visualization\n\n")

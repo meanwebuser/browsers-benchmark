@@ -1,8 +1,7 @@
 import asyncio
+import json
 import logging
 import os
-import re
-from datetime import datetime
 from typing import Optional
 
 from config.settings import settings
@@ -15,16 +14,6 @@ def _resolve_fingerprint_output_dir(engine: BrowserEngine) -> str:
     run_result_path = getattr(engine, "run_result_path", "") or ""
     base_path = run_result_path if run_result_path else settings.paths.results_path
     return os.path.join(base_path, "fingerprint_demo")
-
-
-async def _save_score_screenshot(engine: BrowserEngine) -> str:
-    output_dir = _resolve_fingerprint_output_dir(engine)
-    os.makedirs(output_dir, exist_ok=True)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    screenshot_path = os.path.join(output_dir, f"{engine.name}_smart_signals_{timestamp}.png")
-    await engine.screenshot(screenshot_path)
-    return screenshot_path
 
 
 async def _click_browser_smart_signals_tab(engine: BrowserEngine, tries: int = 20) -> bool:
@@ -48,55 +37,6 @@ return true;
         await asyncio.sleep(1)
 
     return False
-
-
-async def _extract_smart_signals_score(engine: BrowserEngine) -> Optional[float]:
-    score_script = """
-const block = document.querySelector('div[class*=\"signalsGrid\"] > div:nth-child(11)');
-if (!block) return null;
-
-const specific = block.querySelector('div[class*=\"dataValueRow\"] p > span');
-if (specific && (specific.textContent || '').trim()) {
-  return (specific.textContent || '').trim();
-}
-
-const text = (block.innerText || block.textContent || '').trim();
-if (!text) return null;
-return text;
-"""
-
-    timeout_s = settings.browser.page_load_timeout_s
-    deadline = asyncio.get_event_loop().time() + timeout_s
-    last_text: Optional[str] = None
-
-    while asyncio.get_event_loop().time() < deadline:
-        raw_score = await engine.execute_js(score_script)
-        if raw_score is not None:
-            try:
-                text = str(raw_score).strip().replace(",", ".")
-                last_text = text
-                match = re.search(r"-?\d+(?:\.\d+)?", text)
-                if not match:
-                    await asyncio.sleep(1)
-                    continue
-                await _save_score_screenshot(engine)
-                return float(match.group(0))
-            except Exception:
-                logger.exception("%s: failed to parse score from %r", engine.name, raw_score)
-                await asyncio.sleep(1)
-                continue
-
-        await asyncio.sleep(1)
-
-    if last_text is not None:
-        logger.warning(
-            "%s: score text found but numeric value missing after timeout (%ss): %r",
-            engine.name,
-            timeout_s,
-            last_text,
-        )
-
-    return None
 
 
 async def _open_signal_details(engine: BrowserEngine) -> bool:
@@ -164,6 +104,26 @@ def _save_demo_code(engine: BrowserEngine, code_text: str) -> str:
     return output_path
 
 
+def _extract_suspect_score(code_text: str) -> Optional[float]:
+    try:
+        payload = json.loads(code_text)
+    except Exception:
+        return None
+
+    # fingerprint.com/demo exposes this at products.suspectScore.data.result
+    if isinstance(payload, dict):
+        result = (
+            payload.get("products", {})
+            .get("suspectScore", {})
+            .get("data", {})
+            .get("result")
+        )
+        if isinstance(result, (int, float)):
+            return float(result)
+
+    return None
+
+
 async def extract_fingerprint_demo_data(engine: BrowserEngine) -> dict:
     """
     Extract Browser Smart Signals score and raw code sample from fingerprint.com/demo.
@@ -173,23 +133,24 @@ async def extract_fingerprint_demo_data(engine: BrowserEngine) -> dict:
     if not clicked_tab:
         logger.warning("%s: failed to open 'BROWSER SMART SIGNALS' tab", engine.name)
 
-    score = await _extract_smart_signals_score(engine)
-
     opened_details = await _open_signal_details(engine)
     if not opened_details:
         logger.warning("%s: failed to open signal details via goArrowIcon", engine.name)
 
     code_text = await _extract_code_block(engine)
     file_path = ""
+    suspect_score = None
     if code_text:
         file_path = _save_demo_code(engine, code_text)
+        suspect_score = _extract_suspect_score(code_text)
+        if suspect_score is None:
+            logger.warning("%s: failed to parse suspectScore.data.result from demo JSON", engine.name)
     else:
         logger.warning("%s: failed to extract Fingerprint demo code block", engine.name)
 
     return {
-        # Keep existing report pipeline fields for compatibility.
-        "fingerprint_untrust_score": score if score is not None else 0,
-        "suspect_score": 0,
+        "fingerprint_untrust_score": None,
+        "suspect_score": suspect_score,
         "fingerprint_webrtc_ip": "",
         "fingerprint_demo_file": file_path,
     }

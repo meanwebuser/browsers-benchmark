@@ -43,6 +43,7 @@ def process_bypass_data(results: List[Dict[str, Any]]) -> pd.DataFrame:
             "bypass_rate": engine_result["bypass_rate"],
             "avg_memory_mb": engine_result["average_memory_mb"],
             "avg_cpu_percent": engine_result["average_cpu_percent"],
+            "startup_time_ms": engine_result.get("startup_time_ms"),
         }
 
         # per-target stats
@@ -92,6 +93,7 @@ def process_browser_data(results: List[Dict[str, Any]]) -> pd.DataFrame:
         base_row = {
             "engine": engine_name,
             "has_proxy": has_proxy,
+            "startup_time_ms": engine_result.get("startup_time_ms"),
         }
 
         # per-target metrics

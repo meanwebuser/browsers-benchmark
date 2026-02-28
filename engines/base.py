@@ -3,6 +3,7 @@ import ipaddress
 import json
 import logging
 import re
+import threading
 import time
 from typing import Dict, Optional, Any, TypedDict, Tuple, List
 
@@ -48,6 +49,7 @@ class BrowserEngine(abc.ABC):
         self.process_list = []
         self.browser = None
         self._start_time = None
+        self._cpu_sample_lock = threading.Lock()
 
     @property
     @abc.abstractmethod
@@ -140,28 +142,30 @@ class BrowserEngine(abc.ABC):
 
     def get_cpu_usage(self) -> float:
         """Get current cpu usage percentage"""
+        # cpu_percent() uses internal deltas; overlapping samplers on the same process
+        # distort values, so keep one sampling window at a time per engine instance.
+        with self._cpu_sample_lock:
+            live_processes = self._get_live_processes()
+            if not live_processes:
+                return 0.0
 
-        live_processes = self._get_live_processes()
-        if not live_processes:
-            return 0.0
+            # Prime counters for a consistent sample window.
+            for proc in live_processes:
+                try:
+                    proc.cpu_percent(interval=None)
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
 
-        # Prime counters for a consistent sample window.
-        for proc in live_processes:
-            try:
-                proc.cpu_percent(interval=None)
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
+            time.sleep(0.1)
 
-        time.sleep(0.1)
+            total_cpu = 0.0
+            for proc in live_processes:
+                try:
+                    total_cpu += proc.cpu_percent(interval=None)
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
 
-        total_cpu = 0.0
-        for proc in live_processes:
-            try:
-                total_cpu += proc.cpu_percent(interval=None)
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
-
-        return total_cpu
+            return total_cpu
 
     def _get_live_processes(self) -> List[psutil.Process]:
         """
@@ -191,7 +195,8 @@ class BrowserEngine(abc.ABC):
 
         if not self._start_time:
             return 0.0
-        return time.time() - self._start_time
+        # _start_time is set from event-loop monotonic clock in engine.start().
+        return time.monotonic() - self._start_time
 
     @staticmethod
     def _extract_ip(raw_text: str) -> Optional[str]:

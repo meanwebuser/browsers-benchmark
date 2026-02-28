@@ -160,6 +160,8 @@ class ProxyManager:
         self.test_url = settings.proxy.test_url
         self.test_timeout = settings.proxy.test_timeout
         self.lock_stale_s = settings.proxy.lock_stale_s
+        # Keep for backward compatibility in logs/debug, but do not rely on this field
+        # for lock ownership because workers can be created via fork.
         self.process_id = os.getpid()
 
         self._ensure_db()
@@ -169,6 +171,11 @@ class ProxyManager:
     @staticmethod
     def _now_iso() -> str:
         return datetime.utcnow().isoformat(timespec="seconds")
+
+    @staticmethod
+    def _current_process_id() -> int:
+        """Return real PID for the current process (safe with forked workers)."""
+        return os.getpid()
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=30)
@@ -363,7 +370,7 @@ class ProxyManager:
             INSERT INTO proxy_events(proxy_id, event_type, site, error_message, process_id, created_at)
             VALUES(?, ?, ?, ?, ?, ?)
             """,
-            (proxy_id, event_type, site, error_message, self.process_id, self._now_iso()),
+            (proxy_id, event_type, site, error_message, self._current_process_id(), self._now_iso()),
         )
 
     async def _test_proxy_async(self, proxy_url: str) -> bool:
@@ -432,8 +439,10 @@ class ProxyManager:
         self,
         conn: sqlite3.Connection,
         supported_protocols: Optional[List[str]] = None,
+        exclude_proxy_ids: Optional[set[int]] = None,
     ) -> Optional[sqlite3.Row]:
         supported_protocols = supported_protocols or []
+        exclude_proxy_ids = exclude_proxy_ids or set()
 
         query = """
             SELECT p.*
@@ -455,12 +464,17 @@ class ProxyManager:
                     AND locked.locked_by IS NOT NULL
               )
         """
-        params: List[str] = []
+        params: List[Any] = []
 
         if supported_protocols:
             placeholders = ",".join(["?"] * len(supported_protocols))
             query += f" AND p.protocol IN ({placeholders})"
             params.extend(supported_protocols)
+
+        if exclude_proxy_ids:
+            placeholders = ",".join(["?"] * len(exclude_proxy_ids))
+            query += f" AND p.id NOT IN ({placeholders})"
+            params.extend(list(exclude_proxy_ids))
 
         query += """
             ORDER BY
@@ -514,7 +528,7 @@ class ProxyManager:
                     AND locked.locked_by IS NOT NULL
               )
             """,
-            (now, self.process_id, now, now, proxy_id),
+            (now, self._current_process_id(), now, now, proxy_id),
         )
         if result.rowcount == 1:
             self._record_event(conn, proxy_id, "selected", site=site)
@@ -544,19 +558,23 @@ class ProxyManager:
         if not supported_protocols:
             logger.info("Selecting any protocol proxy")
 
-        attempts = 0
-        max_attempts = self._count_available(supported_protocols)
-        if max_attempts == 0:
+        if self._count_available(supported_protocols) == 0:
             logger.error("No available proxies for requested protocols")
             return None
 
-        while attempts < max_attempts:
-            attempts += 1
+        tried_proxy_ids: set[int] = set()
+        while True:
             with self._connect() as conn:
-                row = self._select_candidate(conn, supported_protocols)
+                row = self._select_candidate(
+                    conn,
+                    supported_protocols,
+                    exclude_proxy_ids=tried_proxy_ids,
+                )
                 if not row:
                     break
 
+                proxy_id = int(row["id"])
+                tried_proxy_ids.add(proxy_id)
                 proxy_url = row["url"]
                 if not await self._test_proxy_async(proxy_url):
                     self._mark_proxy_error(proxy_url, "Proxy health-check failed", site=site, mark_failed=True)
@@ -626,7 +644,7 @@ class ProxyManager:
                 WHERE id = ?
                   AND locked_by = ?
                 """,
-                (self._now_iso(), row["id"], self.process_id),
+                (self._now_iso(), row["id"], self._current_process_id()),
             )
 
     async def aget_fallback_proxy(

@@ -1,5 +1,6 @@
 import asyncio
 import gc
+import inspect
 import logging
 import os
 import random
@@ -13,15 +14,17 @@ import multiprocessing as mp
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
+import psutil
+
 
 from config.benchmark_targets import benchmark_targets_config
 from config.engines import engines_config
 from config.settings import settings
 from engines.base import BrowserEngine
-from utils.dataclasses import BypassTestResult, BrowserDataResult, BenchmarkResults
+from utils.dataclasses import BypassTestResult, BrowserDataResult, BenchmarkResults, MetricSummary
 from utils.io import create_directory_structure, save_results
 from utils.logging.logging import setup_logging
-from utils.metrics import calculate_metrics
+from utils.metrics import calculate_metrics, calculate_min_mean_max
 from utils.proxy.proxy_manager import (
     proxy_manager,
     is_proxy_related_error,
@@ -213,6 +216,7 @@ async def test_bypass_target(
 
     target_url = _resolve_target_url(target)
     result = BypassTestResult(target=target["name"], url=target_url)
+    test_started_at = monotonic()
 
     async def attempt_bypass_test():
         monitoring_stop_event = asyncio.Event()
@@ -264,6 +268,8 @@ async def test_bypass_target(
                     mark_failed=False
                 )
             logger.warning(f'{engine.name} failed bypass test for {target["name"]}: {e}')
+    finally:
+        result.performance.test_duration_ms = int((monotonic() - test_started_at) * 1000)
 
     await take_screenshot(engine, screenshots_path, target["name"])
 
@@ -287,9 +293,11 @@ async def extract_browser_data(
 
     target_url = _resolve_target_url(target)
     result = BrowserDataResult(target=target["name"], url=target_url)
+    test_started_at = monotonic()
 
     async def attempt_data_extraction():
-        await engine.navigate(target_url)
+        navigation_result = await engine.navigate(target_url)
+        result.navigation_time_ms = int(navigation_result.get("load_time", 0) * 1000)
         await asyncio.sleep(settings.browser.page_stabilization_delay_s)  # ensure page is fully loaded
 
         extract_function = benchmark_targets_config.browser_data_targets.checkers.get(target["check_function"])
@@ -330,6 +338,8 @@ async def extract_browser_data(
                     mark_failed=False
                 )
             logger.warning(f'{engine.name} failed data extraction for {target["name"]}: {e}')
+    finally:
+        result.test_duration_ms = int((monotonic() - test_started_at) * 1000)
 
     await take_screenshot(engine, screenshots_path, target["name"])
 
@@ -377,9 +387,13 @@ async def run_benchmark_for_engine(
 
     memory_readings: List[int] = []
     cpu_readings: List[float] = []
+    peak_memory_readings: List[int] = []
+    max_cpu_readings: List[float] = []
 
     try:
+        startup_started_at = monotonic()
         await engine.start()
+        results.startup_time_ms = int((monotonic() - startup_started_at) * 1000)
         logger.info(f"Started {engine.name} engine")
         # warm up psutil CPU counters once right after process start to avoid a cold first sample
         await asyncio.to_thread(engine.get_cpu_usage)
@@ -392,6 +406,8 @@ async def run_benchmark_for_engine(
             if not bypass_result.error:
                 memory_readings.append(bypass_result.performance.memory_mb)
                 cpu_readings.append(bypass_result.performance.cpu_percent)
+                peak_memory_readings.append(bypass_result.performance.peak_rss_mb)
+                max_cpu_readings.append(bypass_result.performance.max_cpu_percent)
 
             await asyncio.sleep(1)
 
@@ -410,6 +426,25 @@ async def run_benchmark_for_engine(
         )
         results.average_memory_mb = avg_memory
         results.average_cpu_percent = avg_cpu
+        mem_min, mem_mean, mem_max = calculate_min_mean_max([float(value) for value in memory_readings])
+        cpu_min, cpu_mean, cpu_max = calculate_min_mean_max(cpu_readings)
+        peak_mem_min, peak_mem_mean, peak_mem_max = calculate_min_mean_max(
+            [float(value) for value in peak_memory_readings]
+        )
+        max_cpu_min, max_cpu_mean, max_cpu_max = calculate_min_mean_max(max_cpu_readings)
+
+        results.memory_mb_stats = MetricSummary(min=mem_min, mean=mem_mean, max=mem_max)
+        results.cpu_percent_stats = MetricSummary(min=cpu_min, mean=cpu_mean, max=cpu_max)
+        results.peak_rss_mb_stats = MetricSummary(
+            min=peak_mem_min,
+            mean=peak_mem_mean,
+            max=peak_mem_max,
+        )
+        results.max_cpu_percent_stats = MetricSummary(
+            min=max_cpu_min,
+            mean=max_cpu_mean,
+            max=max_cpu_max,
+        )
         results.bypass_rate = bypass_rate
 
         # cleanup
@@ -488,6 +523,27 @@ def run_engine_worker(task):
         return None
     finally:
         loop.close()
+
+        # Worker processes can be reused by the pool.
+        # Ensure no browser subprocesses leak into the next task.
+        try:
+            worker_proc = psutil.Process(os.getpid())
+            children = worker_proc.children(recursive=True)
+            if children:
+                for child in children:
+                    try:
+                        child.terminate()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                        continue
+
+                _, alive = psutil.wait_procs(children, timeout=3)
+                for child in alive:
+                    try:
+                        child.kill()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                        continue
+        except Exception as cleanup_error:
+            logger.debug("Worker process cleanup failed: %s", cleanup_error)
 
 
 def run_parallel_benchmarks() -> None:
@@ -581,7 +637,17 @@ def run_parallel_benchmarks() -> None:
     progress_heartbeat_s = 30
     benchmark_started_at = monotonic()
 
-    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+    executor_kwargs = {"max_workers": num_workers}
+    if "max_tasks_per_child" in inspect.signature(ProcessPoolExecutor).parameters:
+        executor_kwargs["max_tasks_per_child"] = 1
+        logger.info("Process pool isolation enabled: max_tasks_per_child=1")
+    else:
+        logger.warning(
+            "ProcessPoolExecutor in this Python version does not support max_tasks_per_child; "
+            "worker reuse remains enabled."
+        )
+
+    with ProcessPoolExecutor(**executor_kwargs) as executor:
         # Запускаем все задачи и собираем результаты по мере завершения
         future_to_engine = {executor.submit(run_engine_worker, task): task[1]['name'] for task in tasks}
         future_started_at = {future: monotonic() for future in future_to_engine}

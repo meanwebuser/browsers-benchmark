@@ -7,10 +7,20 @@ class PerformanceMetrics:
     """Performance metrics for a single test run"""
 
     load_time_ms: int = 0
+    test_duration_ms: int = 0
     memory_mb: int = 0
     cpu_percent: float = 0.0
     peak_rss_mb: int = 0
     max_cpu_percent: float = 0.0
+
+
+@dataclass
+class MetricSummary:
+    """Summary statistics for a numeric metric."""
+
+    min: float = 0.0
+    mean: float = 0.0
+    max: float = 0.0
 
 
 @dataclass
@@ -31,6 +41,8 @@ class BrowserDataResult:
     target: str
     url: str
     error: Optional[str] = None
+    navigation_time_ms: int = 0
+    test_duration_ms: int = 0
     # Fingerprint data
     fingerprint_untrust_score: Optional[float] = None
     suspect_score: Optional[float] = None
@@ -59,7 +71,12 @@ class BenchmarkResults:
     timestamp: str
     bypass_targets_results: List[BypassTestResult] = field(default_factory=list)
     browser_data_targets_results: List[BrowserDataResult] = field(default_factory=list)
+    startup_time_ms: Optional[int] = None
     average_memory_mb: int = 0
     average_cpu_percent: float = 0.0
+    memory_mb_stats: MetricSummary = field(default_factory=MetricSummary)
+    cpu_percent_stats: MetricSummary = field(default_factory=MetricSummary)
+    peak_rss_mb_stats: MetricSummary = field(default_factory=MetricSummary)
+    max_cpu_percent_stats: MetricSummary = field(default_factory=MetricSummary)
     bypass_rate: float = 0.0
     error: Optional[str] = None

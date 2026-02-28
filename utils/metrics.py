@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Sequence
 
 from utils.dataclasses import BypassTestResult
 
@@ -24,3 +24,19 @@ def calculate_metrics(
     bypass_rate = bypass_count / len(bypass_results) if bypass_results else 0.0
 
     return avg_memory, avg_cpu, bypass_rate
+
+
+def calculate_min_mean_max(readings: Sequence[float]) -> tuple[float, float, float]:
+    """
+    Calculate min/mean/max for a sequence of numeric readings.
+
+    :param readings: Sequence of numeric values
+    :return: (min, mean, max); zeros for empty input
+    """
+    if not readings:
+        return 0.0, 0.0, 0.0
+
+    minimum = min(readings)
+    maximum = max(readings)
+    mean = sum(readings) / len(readings)
+    return minimum, mean, maximum

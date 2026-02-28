@@ -8,6 +8,7 @@ from .data_processor import process_bypass_data, process_browser_data
 from .markdown_generator import generate_markdown_summary
 from .visualizations import (
     generate_bypass_dashboard_image,
+    generate_timings_dashboard_image,
     generate_recaptcha_score_image,
     generate_fingerprint_image,
     generate_fingerprint_demo_image,
@@ -81,6 +82,7 @@ def _generate_all_visualizations(bypass_df, browser_data_df, media_output_dir: s
 
     return {
         "bypass_dashboard_image": generate_bypass_dashboard_image(bypass_df, media_output_dir),
+        "timings_dashboard_image": generate_timings_dashboard_image(bypass_df, browser_data_df, media_output_dir),
         "recaptcha_score_image": generate_recaptcha_score_image(browser_data_df, media_output_dir),
         "fingerprint_image": generate_fingerprint_image(browser_data_df, media_output_dir),
         "fingerprint_demo_image": generate_fingerprint_demo_image(browser_data_df, media_output_dir),

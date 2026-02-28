@@ -128,6 +128,35 @@ def generate_bypass_dashboard_image(df: pd.DataFrame, output_dir: str) -> str:
     return image_path
 
 
+def generate_timings_dashboard_image(
+        bypass_df: pd.DataFrame,
+        browser_data_df: pd.DataFrame,
+        output_dir: str
+) -> str:
+    """Generate a multi-panel dashboard with startup/navigation/full-test timings."""
+
+    plt.figure(figsize=report_settings.visualization.figure_size_large)
+    plt.suptitle("Browser Engine Timings Dashboard", fontsize=24, y=0.99)
+
+    if bypass_df.empty and browser_data_df.empty:
+        plt.text(0.5, 0.5, "No timing data available", ha='center', va='center', fontsize=16)
+        image_path = os.path.join(output_dir, report_settings.filenames.timings_dashboard)
+        plt.savefig(image_path, dpi=report_settings.visualization.dpi)
+        plt.close('all')
+        return image_path
+
+    _create_startup_timing_subplot(bypass_df, browser_data_df)
+    _create_bypass_timing_subplot(bypass_df)
+    _create_browser_data_timing_subplot(browser_data_df)
+    _create_overhead_timing_subplot(bypass_df, browser_data_df)
+
+    plt.tight_layout(rect=(0, 0, 1.0, 0.96))
+    image_path = os.path.join(output_dir, report_settings.filenames.timings_dashboard)
+    plt.savefig(image_path, dpi=report_settings.visualization.dpi, bbox_inches="tight")
+    plt.close('all')
+    return image_path
+
+
 def generate_recaptcha_score_image(df: pd.DataFrame, output_dir: str) -> str:
     """
     Generate image for Recaptcha scores
@@ -139,7 +168,10 @@ def generate_recaptcha_score_image(df: pd.DataFrame, output_dir: str) -> str:
     plt.figure(figsize=report_settings.visualization.figure_size_medium)
     plt.title("Recaptcha Scores by Browser", fontsize=16)
 
-    recaptcha_df = df.dropna(subset=["recaptcha_score"])
+    if df.empty or "recaptcha_score" not in df.columns:
+        recaptcha_df = pd.DataFrame()
+    else:
+        recaptcha_df = df.dropna(subset=["recaptcha_score"])
 
     if recaptcha_df.empty:
         plt.text(0.5, 0.5, "No reCAPTCHA data available",
@@ -210,27 +242,28 @@ def generate_fingerprint_demo_image(df: pd.DataFrame, output_dir: str) -> str:
         plt.close('all')
         return image_path
 
-    if "fingerprint_untrust_score" not in target_df.columns:
-        target_df["fingerprint_untrust_score"] = np.nan
-    target_df["fingerprint_untrust_score"] = pd.to_numeric(target_df["fingerprint_untrust_score"], errors="coerce")
-    score_data = target_df.groupby("engine")["fingerprint_untrust_score"].mean().reset_index()
-    score_data = score_data.dropna(subset=["fingerprint_untrust_score"]).sort_values("fingerprint_untrust_score", ascending=False)
+    if "suspect_score" not in target_df.columns:
+        target_df["suspect_score"] = np.nan
+    target_df["suspect_score"] = pd.to_numeric(target_df["suspect_score"], errors="coerce")
+    score_data = target_df.groupby("engine")["suspect_score"].mean().reset_index()
+    score_data = score_data.dropna(subset=["suspect_score"]).sort_values("suspect_score", ascending=False)
 
     if score_data.empty:
-        plt.text(0.5, 0.5, "No Browser Smart Signals score data available",
+        plt.text(0.5, 0.5, "No suspect score data available",
                  ha='center', va='center', fontsize=16)
         image_path = os.path.join(output_dir, report_settings.filenames.fingerprint_demo)
         plt.savefig(image_path, dpi=report_settings.visualization.dpi)
         plt.close('all')
         return image_path
 
-    sns.barplot(x="engine", y="fingerprint_untrust_score", hue="engine",
+    sns.barplot(x="engine", y="suspect_score", hue="engine",
                 data=score_data, palette="viridis", legend=False)
     plt.xticks(rotation=45, ha="right", fontsize=10)
-    plt.ylabel("Browser Smart Signals Score", fontsize=12)
+    plt.ylabel("Suspect Score (%)", fontsize=12)
     plt.grid(axis="y", **report_settings.colors.grid_style)
+    plt.figtext(0.5, 0.01, "Higher is worse", ha="center", fontsize=10)
 
-    for i, v in enumerate(score_data["fingerprint_untrust_score"]):
+    for i, v in enumerate(score_data["suspect_score"]):
         plt.text(i, v + 0.5, f"{v:.2f}", ha='center', va='bottom', fontsize=9)
 
     image_path = os.path.join(output_dir, report_settings.filenames.fingerprint_demo)
@@ -513,6 +546,157 @@ def _create_load_time_subplot(df: pd.DataFrame) -> None:
     # value labels on bars
     for i, v in enumerate(load_time_by_engine["load_time_ms"]):
         bar_plot.text(i, v + 50, f"{v:.0f} ms", ha="center", fontsize=10)
+
+
+def _draw_no_data_subplot(title: str, message: str) -> None:
+    plt.title(title, fontsize=16)
+    plt.text(0.5, 0.5, message, ha='center', va='center', fontsize=12)
+    plt.xticks([])
+    plt.yticks([])
+
+
+def _create_startup_timing_subplot(bypass_df: pd.DataFrame, browser_data_df: pd.DataFrame) -> None:
+    plt.subplot(2, 2, 1)
+
+    frames: list[pd.DataFrame] = []
+    if not bypass_df.empty and {"engine", "startup_time_ms"}.issubset(bypass_df.columns):
+        frames.append(bypass_df[["engine", "startup_time_ms"]].copy())
+    if not browser_data_df.empty and {"engine", "startup_time_ms"}.issubset(browser_data_df.columns):
+        frames.append(browser_data_df[["engine", "startup_time_ms"]].copy())
+
+    if not frames:
+        _draw_no_data_subplot("Startup Time", "No startup timing data available")
+        return
+
+    startup_df = pd.concat(frames, ignore_index=True)
+    startup_df["startup_time_ms"] = pd.to_numeric(startup_df["startup_time_ms"], errors="coerce")
+    startup_df = startup_df.dropna(subset=["startup_time_ms"])
+    if startup_df.empty:
+        _draw_no_data_subplot("Startup Time", "No startup timing data available")
+        return
+
+    startup_data = startup_df.groupby("engine")["startup_time_ms"].mean().reset_index()
+    startup_data = startup_data.sort_values("startup_time_ms")
+
+    sns.barplot(x="engine", y="startup_time_ms", hue="engine", data=startup_data, palette="viridis", legend=False)
+    plt.title("Browser Startup Time", fontsize=16)
+    plt.ylabel("ms", fontsize=12)
+    plt.xticks(rotation=45, ha="right", fontsize=10)
+    plt.grid(axis="y", **report_settings.colors.grid_style)
+
+
+def _create_bypass_timing_subplot(bypass_df: pd.DataFrame) -> None:
+    plt.subplot(2, 2, 2)
+
+    if bypass_df.empty or "engine" not in bypass_df.columns:
+        _draw_no_data_subplot("Bypass Timings", "No bypass timing data available")
+        return
+
+    local_df = bypass_df.copy()
+    local_df["load_time_ms"] = pd.to_numeric(local_df.get("load_time_ms"), errors="coerce")
+    local_df["test_duration_ms"] = pd.to_numeric(local_df.get("test_duration_ms"), errors="coerce")
+    local_df = local_df.dropna(subset=["load_time_ms", "test_duration_ms"])
+    if local_df.empty:
+        _draw_no_data_subplot("Bypass Timings", "No bypass timing data available")
+        return
+
+    by_engine = local_df.groupby("engine")[["load_time_ms", "test_duration_ms"]].mean().reset_index()
+    by_engine = by_engine.sort_values("test_duration_ms")
+
+    x = np.arange(len(by_engine))
+    width = 0.38
+    plt.bar(x - width / 2, by_engine["load_time_ms"], width, label="Navigation", color="#4C78A8", alpha=0.9)
+    plt.bar(x + width / 2, by_engine["test_duration_ms"], width, label="Full test", color="#F58518", alpha=0.85)
+
+    plt.title("Bypass: Navigation vs Full Test", fontsize=16)
+    plt.ylabel("ms", fontsize=12)
+    plt.xticks(x, by_engine["engine"].tolist(), rotation=45, ha="right", fontsize=10)
+    plt.legend(loc="upper left", fontsize=9)
+    plt.grid(axis="y", **report_settings.colors.grid_style)
+
+
+def _create_browser_data_timing_subplot(browser_data_df: pd.DataFrame) -> None:
+    plt.subplot(2, 2, 3)
+
+    required = {"engine", "navigation_time_ms", "test_duration_ms"}
+    if browser_data_df.empty or not required.issubset(browser_data_df.columns):
+        _draw_no_data_subplot("Browser Data Timings", "No browser-data timing data available")
+        return
+
+    local_df = browser_data_df.copy()
+    local_df["navigation_time_ms"] = pd.to_numeric(local_df["navigation_time_ms"], errors="coerce")
+    local_df["test_duration_ms"] = pd.to_numeric(local_df["test_duration_ms"], errors="coerce")
+    local_df = local_df.dropna(subset=["navigation_time_ms", "test_duration_ms"])
+    if local_df.empty:
+        _draw_no_data_subplot("Browser Data Timings", "No browser-data timing data available")
+        return
+
+    by_engine = local_df.groupby("engine")[["navigation_time_ms", "test_duration_ms"]].mean().reset_index()
+    by_engine = by_engine.sort_values("test_duration_ms")
+
+    x = np.arange(len(by_engine))
+    width = 0.38
+    plt.bar(x - width / 2, by_engine["navigation_time_ms"], width, label="Navigation", color="#54A24B", alpha=0.9)
+    plt.bar(x + width / 2, by_engine["test_duration_ms"], width, label="Full test", color="#E45756", alpha=0.85)
+
+    plt.title("Browser Data: Navigation vs Full Test", fontsize=16)
+    plt.ylabel("ms", fontsize=12)
+    plt.xticks(x, by_engine["engine"].tolist(), rotation=45, ha="right", fontsize=10)
+    plt.legend(loc="upper left", fontsize=9)
+    plt.grid(axis="y", **report_settings.colors.grid_style)
+
+
+def _create_overhead_timing_subplot(bypass_df: pd.DataFrame, browser_data_df: pd.DataFrame) -> None:
+    plt.subplot(2, 2, 4)
+
+    overhead_frames: list[pd.DataFrame] = []
+
+    if not bypass_df.empty and {"engine", "load_time_ms", "test_duration_ms"}.issubset(bypass_df.columns):
+        bypass_local = bypass_df.copy()
+        bypass_local["load_time_ms"] = pd.to_numeric(bypass_local["load_time_ms"], errors="coerce")
+        bypass_local["test_duration_ms"] = pd.to_numeric(bypass_local["test_duration_ms"], errors="coerce")
+        bypass_local = bypass_local.dropna(subset=["load_time_ms", "test_duration_ms"])
+        if not bypass_local.empty:
+            bypass_local["overhead_ms"] = (bypass_local["test_duration_ms"] - bypass_local["load_time_ms"]).clip(lower=0)
+            overhead_frames.append(
+                bypass_local.groupby("engine", as_index=False)["overhead_ms"].mean().assign(source="bypass")
+            )
+
+    if not browser_data_df.empty and {"engine", "navigation_time_ms", "test_duration_ms"}.issubset(browser_data_df.columns):
+        browser_local = browser_data_df.copy()
+        browser_local["navigation_time_ms"] = pd.to_numeric(browser_local["navigation_time_ms"], errors="coerce")
+        browser_local["test_duration_ms"] = pd.to_numeric(browser_local["test_duration_ms"], errors="coerce")
+        browser_local = browser_local.dropna(subset=["navigation_time_ms", "test_duration_ms"])
+        if not browser_local.empty:
+            browser_local["overhead_ms"] = (
+                browser_local["test_duration_ms"] - browser_local["navigation_time_ms"]
+            ).clip(lower=0)
+            overhead_frames.append(
+                browser_local.groupby("engine", as_index=False)["overhead_ms"].mean().assign(source="browser_data")
+            )
+
+    if not overhead_frames:
+        _draw_no_data_subplot("Timing Overhead", "No overhead timing data available")
+        return
+
+    overhead_df = pd.concat(overhead_frames, ignore_index=True)
+    pivot_df = overhead_df.pivot_table(index="engine", columns="source", values="overhead_ms", aggfunc="mean").fillna(0)
+    pivot_df["total"] = pivot_df.sum(axis=1)
+    pivot_df = pivot_df.sort_values("total").drop(columns=["total"])
+
+    x = np.arange(len(pivot_df))
+    width = 0.38
+    bypass_values = pivot_df["bypass"] if "bypass" in pivot_df.columns else np.zeros(len(pivot_df))
+    browser_values = pivot_df["browser_data"] if "browser_data" in pivot_df.columns else np.zeros(len(pivot_df))
+
+    plt.bar(x - width / 2, bypass_values, width, label="Bypass overhead", color="#B279A2", alpha=0.9)
+    plt.bar(x + width / 2, browser_values, width, label="Browser-data overhead", color="#72B7B2", alpha=0.9)
+
+    plt.title("Timing Overhead (Full Test - Navigation)", fontsize=16)
+    plt.ylabel("ms", fontsize=12)
+    plt.xticks(x, pivot_df.index.tolist(), rotation=45, ha="right", fontsize=10)
+    plt.legend(loc="upper left", fontsize=9)
+    plt.grid(axis="y", **report_settings.colors.grid_style)
 
 
 def _create_recaptcha_plot(recaptcha_df: pd.DataFrame) -> None:

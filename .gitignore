@@ -58,3 +58,5 @@ results/example/media/creepjs_scores.png
 results/example/media/recaptcha_scores.png
 node_modules/
 
+.install_state/
+package-lock.json

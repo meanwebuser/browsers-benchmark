@@ -238,7 +238,10 @@ def _compute_engine_scores(
         if v is not None and v > 0
     ]
 
-    startup_time_ms = statistics.median(load_samples) if load_samples else None
+    startup_time_ms = _safe_float(engine_result.get("startup_time_ms"))
+    if startup_time_ms is None or startup_time_ms <= 0:
+        # Backward compatibility for old result files that don't have startup_time_ms yet.
+        startup_time_ms = statistics.median(load_samples) if load_samples else None
     avg_memory_mb = _mean(mem_samples)
     avg_cpu_percent = _mean(cpu_samples)
 
