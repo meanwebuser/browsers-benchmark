@@ -42,7 +42,7 @@ Modern web applications use advanced bot detection like Cloudflare, DataDome, an
 - <a href="https://camoufox.com">**Camoufox**</a> - Playwright-based
 - <a href="https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python">**Patchright**</a> - Playwright-based
 - <a href="https://github.com/tinyfish-io/tf-playwright-stealth">**Playwright Stealth**</a> - Playwright-based
-- <a href="https://www.selenium.dev">**Selenium**</a> - Open-source browser automation framework (apparently deprecated, so it is tested without proxies)
+- <a href="https://www.selenium.dev">**Selenium**</a> - Open-source browser automation framework (tested without proxies)
 - <a href="https://seleniumbase.io/">**Seleniumbase**</a> - Open-source professional toolkit for web automation activities
 - <a href="https://github.com/ultrafunkamsterdam/nodriver">**NoDriver**</a> - Open-source browser automation framework (supports only SOCKS5 proxies)
 - <a href="https://github.com/cdpdriver/zendriver">**ZenDriver**</a> - NoDriver-based
@@ -162,7 +162,7 @@ And vise versa, with score >= 0.7 it will be much easier.
 ![CreepJS Scores](results/example/media/creepjs_scores.png)
 
 ## 🛠️ Installation
-
+Tested only on Ubuntu. Mac have some trubles with camoufox and etc. 
 ### Quick Start
 1. **Clone the repository**
    ```bash
@@ -234,17 +234,20 @@ And vise versa, with score >= 0.7 it will be much easier.
    python main.py
    ```
 
-7. **Run diagnostic engine tests (optional)**
-   All test scripts are located in `tests/`:
+7. **Run tests (pytest, single framework)**
+   ```bash
+   make test
+   ```
+
+   Engine diagnostics are available as opt-in pytest tests:
+   ```bash
+   make test-engines
+   ```
+
+   Under the hood these cover:
    - `tests/test_stealth_python_params.py` - validates Python -> stealth navigator params per engine
    - `tests/test_proxy_env.py` - validates proxy usage per engine
    - `tests/test_headed_xvfb_env.py` - validates headed launch behavior in headless env (Xvfb fallback)
-
-   ```bash
-   ./venv/bin/python tests/test_stealth_python_params.py
-   ./venv/bin/python tests/test_proxy_env.py --allow-missing-proxy
-   ./venv/bin/python tests/test_headed_xvfb_env.py
-   ```
 
 ## ⚙️ Configuration
 

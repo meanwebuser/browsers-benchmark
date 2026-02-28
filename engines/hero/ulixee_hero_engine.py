@@ -41,9 +41,7 @@ class UlixeeHeroEngine(BrowserEngine):
 
     @property
     def supported_proxy_protocols(self) -> list[str]:
-        # Hero supports proxy setup, but this wrapper intentionally keeps proxy logic disabled
-        # until protocol handling is validated in benchmark conditions.
-        return []
+        return ["http", "https"]
 
     async def start(self) -> None:
         self._start_time = asyncio.get_event_loop().time()
@@ -77,6 +75,7 @@ class UlixeeHeroEngine(BrowserEngine):
                     "headless": self.headless,
                     "userAgent": self.user_agent,
                     "viewport": {"width": self.viewport_width, "height": self.viewport_height},
+                    "proxy": self.proxy,
                     "pageLoadTimeoutMs": settings.browser.page_load_timeout_s * 1000,
                     "initScripts": init_script_sources,
                 },
@@ -86,8 +85,7 @@ class UlixeeHeroEngine(BrowserEngine):
             await self.stop()
             raise
 
-        if self.proxy:
-            logger.warning("%s: proxy is configured but UlixeeHeroEngine currently runs without proxy support.", self.name)
+        await self.ensure_proxy_is_used()
 
         if self._worker and self._worker.pid:
             self.process_list = [psutil.Process(self._worker.pid)]

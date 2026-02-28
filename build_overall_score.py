@@ -2,6 +2,7 @@ import argparse
 import json
 import math
 import os
+import re
 import statistics
 from pathlib import Path
 from typing import Any
@@ -111,6 +112,11 @@ def _filter_rows_by_sites(rows: list[dict[str, Any]], sites: set[str] | None) ->
     return [row for row in rows if row.get("target") in sites]
 
 
+def _base_engine_name(engine_name: str) -> str:
+    # Collapse repeated runs like "<engine>__run3" into "<engine>".
+    return re.sub(r"__run\d+$", "", engine_name)
+
+
 def _mean(values: list[float]) -> float | None:
     if not values:
         return None
@@ -120,57 +126,49 @@ def _mean(values: list[float]) -> float | None:
 def _extract_bot_signals(browser_rows: list[dict[str, Any]]) -> list[float]:
     signals: list[float] = []
     for row in browser_rows:
-        recaptcha = _normalize_unit_or_percent(row.get("recaptcha_score"))
+        recaptcha = _normalize_unit_or_percent(row.get("recaptcha_score"))  # higher better
         if recaptcha is not None:
             signals.append(recaptcha)
 
-        for key in ("fingerprint_bot_score"):
+        for key in ("suspect_score",):  # lower better
             bot_prob = _normalize_unit_or_percent(row.get(key))
             if bot_prob is not None:
                 signals.append(1.0 - bot_prob)
 
-        for key in ("scan_fingerprint_bot_risk_score",):
-            bot_risk = _normalize_unit_or_percent(row.get(key))
-            if bot_risk is not None:
-                signals.append(1.0 - bot_risk)
+        for key in ("scan_fingerprint_bot_risk_score",):  # lower better
+            scan = _normalize_unit_or_percent(row.get(key))
+            if scan is not None:
+                signals.append(1.0 - scan)
 
-        for key in ("fingerprint_untrust_score"):
-            untrust = _normalize_unit_or_percent(row.get(key))
-            if untrust is not None:
-                signals.append(1.0 - untrust)
-
-        for key in ( "fingerprint_trust_score"):
-            trust = _normalize_unit_or_percent(row.get(key))
-            if trust is not None:
-                signals.append(trust)
-
-        is_bot = _safe_bool(row.get("deviceandbrowserinfo_is_bot"))
-        if is_bot is not None:
-            signals.append(0.0 if is_bot else 1.0)
+        for key in ("deviceandbrowserinfo_suspect_score",):  # lower better
+            suscpect = _normalize_unit_or_percent(row.get(key))
+            if suscpect is not None:
+                signals.append(1.0 - suscpect)
 
     return signals
 
 
-def _estimate_instance_capacity(
-        cpu_count: float,
+def _estimate_instance_capacity_by_ram(
         ram_gb: float,
-        per_instance_cpu_percent: float | None,
         per_instance_memory_mb: float | None,
 ) -> int | None:
-    capacities: list[int] = []
-
-    if per_instance_cpu_percent is not None and per_instance_cpu_percent > 0:
-        total_cpu_capacity = max(cpu_count, 1.0) * 100.0
-        capacities.append(max(0, int(total_cpu_capacity // per_instance_cpu_percent)))
-
-    if per_instance_memory_mb is not None and per_instance_memory_mb > 0:
-        total_memory_mb = max(ram_gb, 0.0) * 1024.0
-        capacities.append(max(0, int(total_memory_mb // per_instance_memory_mb)))
-
-    if not capacities:
+    if per_instance_memory_mb is None or per_instance_memory_mb <= 0:
         return None
 
-    return max(1, min(capacities))
+    total_memory_mb = max(ram_gb, 0.0) * 1024.0
+    return max(1, max(0, int(total_memory_mb // per_instance_memory_mb)))
+
+
+
+def _estimate_instance_capacity_by_cpu(
+        cpu_count: float,
+        per_instance_cpu_percent: float | None,
+) -> int | None:
+    if per_instance_cpu_percent is None or per_instance_cpu_percent <= 0:
+        return None
+
+    total_cpu_capacity = max(cpu_count, 1.0) * 100.0
+    return max(1, max(0, int(total_cpu_capacity // per_instance_cpu_percent)))
 
 
 def _compute_engine_scores(
@@ -196,8 +194,12 @@ def _compute_engine_scores(
             "performance_score": None,
             "bypass_rate": None,
             "bot_human_score": None,
+            "full_test_duration_s": None,
             "startup_time_ms": None,
             "estimated_instances": None,
+            "estimated_instances_ram": None,
+            "estimated_instances_cpu": None,
+            "bottleneck": None,
             "windows_per_hour": None,
             "avg_memory_mb": None,
             "avg_cpu_percent": None,
@@ -237,11 +239,22 @@ def _compute_engine_scores(
         v for v in (_safe_float(row.get("cpu_percent")) for row in perf_rows)
         if v is not None and v > 0
     ]
+    duration_rows = [
+        row
+        for row in (bypass_rows + browser_rows)
+        if row.get("error") in (None, "")
+    ]
+    duration_samples_ms = [
+        v for v in (_safe_float(row.get("test_duration_ms")) for row in duration_rows)
+        if v is not None and v > 0
+    ]
 
     startup_time_ms = _safe_float(engine_result.get("startup_time_ms"))
     if startup_time_ms is None or startup_time_ms <= 0:
         # Backward compatibility for old result files that don't have startup_time_ms yet.
         startup_time_ms = statistics.median(load_samples) if load_samples else None
+    full_test_duration_ms = statistics.median(duration_samples_ms) if duration_samples_ms else None
+    full_test_duration_s = full_test_duration_ms / 1000.0 if full_test_duration_ms is not None else None
     avg_memory_mb = _mean(mem_samples)
     avg_cpu_percent = _mean(cpu_samples)
 
@@ -250,16 +263,38 @@ def _compute_engine_scores(
     if avg_cpu_percent is None:
         avg_cpu_percent = _safe_float(engine_result.get("average_cpu_percent"))
 
-    estimated_instances = _estimate_instance_capacity(
-        cpu_count=cpu_count,
+    estimated_instances_ram = _estimate_instance_capacity_by_ram(
         ram_gb=ram_gb,
-        per_instance_cpu_percent=avg_cpu_percent,
         per_instance_memory_mb=avg_memory_mb,
     )
+    estimated_instances_cpu = _estimate_instance_capacity_by_cpu(
+        cpu_count=cpu_count,
+        per_instance_cpu_percent=avg_cpu_percent,
+    )
+    estimated_instances: int | None = None
+    bottleneck: str | None = None
+    if estimated_instances_ram is not None and estimated_instances_cpu is not None:
+        estimated_instances = min(estimated_instances_ram, estimated_instances_cpu)
+        if estimated_instances_ram < estimated_instances_cpu:
+            bottleneck = "ram"
+        elif estimated_instances_cpu < estimated_instances_ram:
+            bottleneck = "cpu"
+        else:
+            bottleneck = "balanced"
+    elif estimated_instances_ram is not None:
+        estimated_instances = estimated_instances_ram
+        bottleneck = "ram"
+    elif estimated_instances_cpu is not None:
+        estimated_instances = estimated_instances_cpu
+        bottleneck = "cpu"
 
     windows_per_hour = None
-    if startup_time_ms is not None and startup_time_ms > 0 and estimated_instances is not None:
-        windows_per_hour = estimated_instances * (3_600_000.0 / startup_time_ms)
+    if (
+        full_test_duration_s is not None
+        and full_test_duration_s > 0
+        and estimated_instances is not None
+    ):
+        windows_per_hour = estimated_instances * (3_600.0 / full_test_duration_s)
 
     return {
         "engine": engine_name,
@@ -267,8 +302,12 @@ def _compute_engine_scores(
         "performance_score": None,
         "bypass_rate": bypass_rate,
         "bot_human_score": bot_human_score,
+        "full_test_duration_s": full_test_duration_s,
         "startup_time_ms": startup_time_ms,
         "estimated_instances": estimated_instances,
+        "estimated_instances_ram": estimated_instances_ram,
+        "estimated_instances_cpu": estimated_instances_cpu,
+        "bottleneck": bottleneck,
         "windows_per_hour": windows_per_hour,
         "avg_memory_mb": avg_memory_mb,
         "avg_cpu_percent": avg_cpu_percent,
@@ -306,35 +345,168 @@ def _fmt(value: float | int | None, digits: int = 1) -> str:
     if value is None:
         return "n/a"
     if isinstance(value, int):
-        return str(value)
-    return f"{value:.{digits}f}"
+        return f"{value:,}".replace(",", " ")
+    formatted = f"{value:,.{digits}f}"
+    return formatted.replace(",", " ")
 
 
-def _print_table(rows: list[dict[str, Any]]) -> None:
-    headers = [
-        "Engine",
-        "Privacy",
-        "Performance",
-        "Windows/hour",
-        "Instances",
-        "Startup ms",
-        "Bypass %",
-        "Bot/Human %",
+def _apply_derived_scores(rows: list[dict[str, Any]]) -> None:
+    throughput_values = [
+        row["windows_per_hour"] for row in rows
+        if row.get("windows_per_hour") is not None and row["windows_per_hour"] > 0
     ]
+    max_throughput = max(throughput_values) if throughput_values else None
+
+    for row in rows:
+        throughput = row.get("windows_per_hour")
+        if max_throughput and throughput is not None and throughput > 0:
+            row["performance_score"] = (throughput / max_throughput) * 100.0
+        elif throughput is not None and throughput == 0:
+            row["performance_score"] = 0.0
+        else:
+            row["performance_score"] = None
+
+        privacy = row.get("privacy_score")
+        row["overall_score"] = (
+            (privacy / 100.0) * throughput
+            if privacy is not None and throughput is not None
+            else None
+        )
+
+
+def _sort_scored(rows: list[dict[str, Any]]) -> None:
+    rows.sort(
+        key=lambda item: (
+            item["privacy_score"] if item.get("privacy_score") is not None else -1,
+            item["performance_score"] if item.get("performance_score") is not None else -1,
+        ),
+        reverse=True,
+    )
+
+
+def _sort_scored_by_score(rows: list[dict[str, Any]]) -> None:
+    rows.sort(
+        key=lambda item: (
+            item["overall_score"] if item.get("overall_score") is not None else -1,
+            item["privacy_score"] if item.get("privacy_score") is not None else -1,
+            item["performance_score"] if item.get("performance_score") is not None else -1,
+        ),
+        reverse=True,
+    )
+
+
+def _aggregate_scored_by_engine(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        key = _base_engine_name(str(row.get("engine") or "unknown"))
+        groups.setdefault(key, []).append(row)
+
+    numeric_fields = [
+        "privacy_score",
+        "overall_score",
+        "performance_score",
+        "windows_per_hour",
+        "full_test_duration_s",
+        "startup_time_ms",
+        "bypass_rate",
+        "bot_human_score",
+        "avg_memory_mb",
+        "avg_cpu_percent",
+        "estimated_instances",
+        "estimated_instances_ram",
+        "estimated_instances_cpu",
+    ]
+
+    aggregated: list[dict[str, Any]] = []
+    for engine_name, items in groups.items():
+        merged: dict[str, Any] = {
+            "engine": engine_name,
+            "run_count": len(items),
+        }
+
+        for field in numeric_fields:
+            values = [_safe_float(item.get(field)) for item in items]
+            clean = [v for v in values if v is not None]
+            merged[field] = _mean(clean)
+
+        bottlenecks = [str(item.get("bottleneck")) for item in items if item.get("bottleneck")]
+        merged["bottleneck"] = statistics.multimode(bottlenecks)[0] if bottlenecks else None
+        aggregated.append(merged)
+
+    return aggregated
+
+
+def _print_table(
+        rows: list[dict[str, Any]],
+        title: str | None = None,
+        include_run_count: bool = False,
+) -> None:
+    if title:
+        print(title)
+    if include_run_count:
+        headers = [
+            "Engine",
+            "Runs",
+            "Score",
+            "Privacy",
+            "Performance",
+            "Windows/hour",
+            "Instances",
+            "Bottleneck",
+            "Full test s",
+            "Startup ms",
+            "Bypass %",
+            "Human",
+        ]
+    else:
+        headers = [
+            "Engine",
+            "Privacy",
+            "Score",
+            "Performance",
+            "Windows/hour",
+            "Instances",
+            "Bottleneck",
+            "Full test s",
+            "Startup ms",
+            "Bypass %",
+            "Human",
+        ]
     table: list[list[str]] = []
     for row in rows:
-        table.append(
-            [
-                str(row["engine"]),
-                _fmt(row["privacy_score"], 1),
-                _fmt(row["performance_score"], 1),
-                _fmt(row["windows_per_hour"], 1),
-                _fmt(row["estimated_instances"], 0),
-                _fmt(row["startup_time_ms"], 1),
-                _fmt(row["bypass_rate"] * 100 if row["bypass_rate"] is not None else None, 1),
-                _fmt(row["bot_human_score"] * 100 if row["bot_human_score"] is not None else None, 1),
-            ]
-        )
+        if include_run_count:
+            table.append(
+                [
+                    str(row["engine"]),
+                    _fmt(row.get("run_count"), 0),
+                    _fmt(row.get("overall_score"), 1),
+                    _fmt(row["privacy_score"], 1),
+                    _fmt(row["performance_score"], 1),
+                    _fmt(row["windows_per_hour"], 1),
+                    _fmt(row["estimated_instances"], 0),
+                    str(row["bottleneck"] or "n/a"),
+                    _fmt(row["full_test_duration_s"], 1),
+                    _fmt(row["startup_time_ms"], 1),
+                    _fmt(row["bypass_rate"] * 100 if row["bypass_rate"] is not None else None, 1),
+                    _fmt(row["bot_human_score"] * 100 if row["bot_human_score"] is not None else None, 1),
+                ]
+            )
+        else:
+            table.append(
+                [
+                    str(row["engine"]),
+                    _fmt(row["privacy_score"], 1),
+                    _fmt(row.get("overall_score"), 1),
+                    _fmt(row["performance_score"], 1),
+                    _fmt(row["windows_per_hour"], 1),
+                    _fmt(row["estimated_instances"], 0),
+                    str(row["bottleneck"] or "n/a"),
+                    _fmt(row["full_test_duration_s"], 1),
+                    _fmt(row["startup_time_ms"], 1),
+                    _fmt(row["bypass_rate"] * 100 if row["bypass_rate"] is not None else None, 1),
+                    _fmt(row["bot_human_score"] * 100 if row["bot_human_score"] is not None else None, 1),
+                ]
+            )
 
     widths = [len(h) for h in headers]
     for line in table:
@@ -435,25 +607,10 @@ def main() -> None:
         for row in results
     ]
 
-    throughput_values = [
-        row["windows_per_hour"] for row in scored
-        if row["windows_per_hour"] is not None and row["windows_per_hour"] > 0
-    ]
-    max_throughput = max(throughput_values) if throughput_values else None
-    for row in scored:
-        throughput = row["windows_per_hour"]
-        if max_throughput and throughput is not None and throughput > 0:
-            row["performance_score"] = (throughput / max_throughput) * 100.0
-        elif throughput is not None and throughput == 0:
-            row["performance_score"] = 0.0
-
-    scored.sort(
-        key=lambda item: (
-            item["privacy_score"] if item["privacy_score"] is not None else -1,
-            item["performance_score"] if item["performance_score"] is not None else -1,
-        ),
-        reverse=True,
-    )
+    _apply_derived_scores(scored)
+    _sort_scored(scored)
+    aggregated_scored = _aggregate_scored_by_engine(scored)
+    _sort_scored_by_score(aggregated_scored)
 
     print(f"Results source: {results_file}")
     print(f"Hardware basis: cpu_count={cpu_count:.2f}, ram_gb={ram_gb:.2f}")
@@ -462,7 +619,13 @@ def main() -> None:
     else:
         print(f"Included sites: all ({len(available_sites)})")
     print()
-    _print_table(scored)
+    _print_table(scored, title="Per-run scores:")
+    print()
+    _print_table(
+        aggregated_scored,
+        title="Averaged by engine (mean across runs with same params):",
+        include_run_count=True,
+    )
 
     if args.output_file:
         output_path = Path(args.output_file).expanduser().resolve()
@@ -476,14 +639,38 @@ def main() -> None:
                 {
                     "engine": row["engine"],
                     "privacy_score": row["privacy_score"],
+                    "overall_score": row["overall_score"],
                     "performance_score": row["performance_score"],
                     "windows_per_hour": row["windows_per_hour"],
                     "estimated_instances": row["estimated_instances"],
+                    "estimated_instances_ram": row["estimated_instances_ram"],
+                    "estimated_instances_cpu": row["estimated_instances_cpu"],
+                    "bottleneck": row["bottleneck"],
+                    "full_test_duration_s": row["full_test_duration_s"],
                     "startup_time_ms": row["startup_time_ms"],
                     "bypass_rate": row["bypass_rate"],
                     "bot_human_score": row["bot_human_score"],
                 }
                 for row in scored
+            ],
+            "axes_aggregated": [
+                {
+                    "engine": row["engine"],
+                    "run_count": row["run_count"],
+                    "privacy_score": row["privacy_score"],
+                    "overall_score": row["overall_score"],
+                    "performance_score": row["performance_score"],
+                    "windows_per_hour": row["windows_per_hour"],
+                    "estimated_instances": row["estimated_instances"],
+                    "estimated_instances_ram": row["estimated_instances_ram"],
+                    "estimated_instances_cpu": row["estimated_instances_cpu"],
+                    "bottleneck": row["bottleneck"],
+                    "full_test_duration_s": row["full_test_duration_s"],
+                    "startup_time_ms": row["startup_time_ms"],
+                    "bypass_rate": row["bypass_rate"],
+                    "bot_human_score": row["bot_human_score"],
+                }
+                for row in aggregated_scored
             ],
         }
         output_path.write_text(json.dumps(output_payload, indent=2), encoding="utf-8")

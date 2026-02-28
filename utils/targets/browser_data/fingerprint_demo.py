@@ -140,9 +140,14 @@ async def extract_fingerprint_demo_data(engine: BrowserEngine) -> dict:
     code_text = await _extract_code_block(engine)
     file_path = ""
     suspect_score = None
+    payload = None
     if code_text:
         file_path = _save_demo_code(engine, code_text)
         suspect_score = _extract_suspect_score(code_text)
+        try:
+            payload = json.loads(code_text)
+        except Exception:
+            payload = {"raw": code_text}
         if suspect_score is None:
             logger.warning("%s: failed to parse suspectScore.data.result from demo JSON", engine.name)
     else:
@@ -153,4 +158,5 @@ async def extract_fingerprint_demo_data(engine: BrowserEngine) -> dict:
         "suspect_score": suspect_score,
         "fingerprint_webrtc_ip": "",
         "fingerprint_demo_file": file_path,
+        "fingerprint_demo_data": payload,
     }

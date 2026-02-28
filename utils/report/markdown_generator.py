@@ -1,9 +1,10 @@
 import os
 import json
-from typing import Dict
+from typing import Dict, Any
 
 import pandas as pd
 
+import build_overall_score as overall_score
 from config.report import report_settings
 from config.settings import settings
 
@@ -12,7 +13,8 @@ def generate_markdown_summary(
         bypass_df: pd.DataFrame,
         browser_data_df: pd.DataFrame,
         output_dir: str,
-        image_paths: Dict[str, str]
+        image_paths: Dict[str, str],
+        raw_results: list[dict[str, Any]] | None = None,
 ) -> None:
     """
     Generate markdown summary of benchmark results
@@ -21,16 +23,18 @@ def generate_markdown_summary(
     :param browser_data_df: DataFrame containing browser data results
     :param output_dir: Directory to save the generated markdown file
     :param image_paths: Dictionary mapping visualization names to their file paths
+    :param raw_results: Raw benchmark results loaded from benchmark_results.json
     """
 
     with open(os.path.join(output_dir, report_settings.filenames.summary), "w", encoding="utf-8") as f:
         _write_report_header(f)
+        _write_overall_score_section(f, raw_results)
         _write_bypass_section(f, bypass_df)
         _write_resource_section(f, bypass_df)
         _write_recaptcha_section(f, browser_data_df)
         _write_fingerprint_section(f, browser_data_df)
         _write_navigator_specs_section(f, bypass_df, browser_data_df)
-        _write_ip_section(f, browser_data_df)
+        #_write_ip_section(f, browser_data_df)
         _write_visualization_sections(f, image_paths)
 
 
@@ -43,6 +47,88 @@ def _write_report_header(f) -> None:
 
     f.write("# Browser Benchmark Results Summary\n\n")
     f.write(f"*Generated on: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}*\n\n")
+
+
+def _write_overall_score_section(f, raw_results: list[dict[str, Any]] | None) -> None:
+    f.write("## Overall Score (Privacy vs Performance)\n\n")
+
+    if not raw_results:
+        f.write("*No benchmark results available for overall scoring*\n\n")
+        return
+
+    valid_results = [
+        row for row in raw_results
+        if isinstance(row, dict) and overall_score._engine_has_any_data(row)
+    ]
+    if not valid_results:
+        f.write("*No valid engine data available for overall scoring*\n\n")
+        return
+
+    cpu_count = overall_score._detect_cpu_count()
+    ram_gb = overall_score._detect_ram_gb()
+
+    scored = [
+        overall_score._compute_engine_scores(
+            engine_result=row,
+            sites=None,
+            cpu_count=cpu_count,
+            ram_gb=ram_gb,
+            bypass_weight=0.5,
+            bot_weight=0.5,
+        )
+        for row in valid_results
+    ]
+    overall_score._apply_derived_scores(scored)
+    overall_score._sort_scored(scored)
+    aggregated_scored = overall_score._aggregate_scored_by_engine(scored)
+    overall_score._sort_scored_by_score(aggregated_scored)
+
+    f.write("### Per Run\n\n")
+    _write_overall_score_table(f, scored, include_run_count=False)
+    f.write("### Averaged by Engine (mean across runs with same params)\n\n")
+    _write_overall_score_table(f, aggregated_scored, include_run_count=True)
+
+
+def _write_overall_score_table(f, rows: list[dict[str, Any]], include_run_count: bool) -> None:
+    if include_run_count:
+        f.write("| Engine | Runs | Score | Privacy | Performance | Windows/hour | Instances | Bottleneck | Full test s | Startup ms | Bypass % | Human % |\n")
+        f.write("|-----------------|-----:|------:|--------:|------------:|-------------:|----------:|------------|------------:|-----------:|---------:|------------:|\n")
+    else:
+        f.write("| Engine | Privacy | Score | Performance | Windows/hour | Instances | Bottleneck | Full test s | Startup ms | Bypass % | Human % |\n")
+        f.write("|-----------------|--------:|------:|------------:|-------------:|----------:|------------|------------:|-----------:|---------:|------------:|\n")
+
+    for row in rows:
+        if include_run_count:
+            f.write(
+                f"| {row['engine']} "
+                f"| {overall_score._fmt(row.get('run_count'), 0)} "
+                f"| {overall_score._fmt(row.get('overall_score'), 1)} "
+                f"| {overall_score._fmt(row['privacy_score'], 1)} "
+                f"| {overall_score._fmt(row['performance_score'], 1)} "
+                f"| {overall_score._fmt(row['windows_per_hour'], 1)} "
+                f"| {overall_score._fmt(row['estimated_instances'], 0)} "
+                f"| {row['bottleneck'] or 'n/a'} "
+                f"| {overall_score._fmt(row['full_test_duration_s'], 1)} "
+                f"| {overall_score._fmt(row['startup_time_ms'], 1)} "
+                f"| {overall_score._fmt(row['bypass_rate'] * 100 if row['bypass_rate'] is not None else None, 1)} "
+                f"| {overall_score._fmt(row['bot_human_score'] * 100 if row['bot_human_score'] is not None else None, 1)} |\n"
+            )
+        else:
+            f.write(
+                f"| {row['engine']} "
+                f"| {overall_score._fmt(row['privacy_score'], 1)} "
+                f"| {overall_score._fmt(row.get('overall_score'), 1)} "
+                f"| {overall_score._fmt(row['performance_score'], 1)} "
+                f"| {overall_score._fmt(row['windows_per_hour'], 1)} "
+                f"| {overall_score._fmt(row['estimated_instances'], 0)} "
+                f"| {row['bottleneck'] or 'n/a'} "
+                f"| {overall_score._fmt(row['full_test_duration_s'], 1)} "
+                f"| {overall_score._fmt(row['startup_time_ms'], 1)} "
+                f"| {overall_score._fmt(row['bypass_rate'] * 100 if row['bypass_rate'] is not None else None, 1)} "
+                f"| {overall_score._fmt(row['bot_human_score'] * 100 if row['bot_human_score'] is not None else None, 1)} |\n"
+            )
+
+    f.write("\n\n")
 
 
 def _write_bypass_section(f, bypass_df: pd.DataFrame) -> None:
@@ -138,6 +224,9 @@ def _write_fingerprint_section(f, browser_data_df: pd.DataFrame) -> None:
     if suspect_col not in browser_data_df.columns:
         browser_data_df = browser_data_df.copy()
         browser_data_df[suspect_col] = pd.NA
+    if "fingerprint_webrtc_ip" not in browser_data_df.columns:
+        browser_data_df = browser_data_df.copy()
+        browser_data_df["fingerprint_webrtc_ip"] = "Not detected"
 
     # calculate the metrics
     fingerprint_numeric_data = browser_data_df.groupby("engine")[[suspect_col]].mean().reset_index()
@@ -168,7 +257,7 @@ def _write_fingerprint_section(f, browser_data_df: pd.DataFrame) -> None:
     fingerprint_data = pd.merge(fingerprint_numeric_data, fingerprint_webrtc_ip_data, on="engine")
     if fingerprint_file_data is not None:
         fingerprint_data = pd.merge(fingerprint_data, fingerprint_file_data, on="engine", how="left")
-    fingerprint_data = fingerprint_data.sort_values(suspect_col, ascending=False)
+    fingerprint_data = fingerprint_data.sort_values(suspect_col, ascending=True)
 
     f.write("| Engine | Suspect Score (%) | Raw File |\n")
     f.write("|-----------------|--------------:|----------:|\n")

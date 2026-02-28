@@ -2,8 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline");
 
-// Hero in this benchmark does not use upstream proxies, so MITM can be disabled.
-// This avoids socket-setup failures in constrained hosts.
+// Keep MITM disabled by default to avoid socket-setup failures in constrained hosts.
 if (process.env.UBK_MITM_DISABLE === undefined) {
   process.env.UBK_MITM_DISABLE = "true";
 }
@@ -33,6 +32,21 @@ function toPlainHeaders(headers) {
   return out;
 }
 
+function buildUpstreamProxyUrl(proxy) {
+  if (!proxy || typeof proxy !== "object") return null;
+  if (proxy.url) return String(proxy.url);
+
+  const protocol = proxy.protocol ? String(proxy.protocol) : "";
+  const host = proxy.host ? String(proxy.host) : "";
+  const port = proxy.port ? String(proxy.port) : "";
+  if (!protocol || !host || !port) return null;
+
+  const username = proxy.username ? encodeURIComponent(String(proxy.username)) : "";
+  const password = proxy.password ? encodeURIComponent(String(proxy.password)) : "";
+  const auth = username && password ? `${username}:${password}@` : "";
+  return `${protocol}://${auth}${host}:${port}`;
+}
+
 async function handleStart(payload) {
   await handleStop();
 
@@ -46,6 +60,8 @@ async function handleStart(payload) {
   };
 
   if (payload.userAgent) options.userAgent = payload.userAgent;
+  const upstreamProxyUrl = buildUpstreamProxyUrl(payload.proxy);
+  if (upstreamProxyUrl) options.upstreamProxyUrl = upstreamProxyUrl;
   initScripts = Array.isArray(payload.initScripts)
     ? payload.initScripts.filter(x => typeof x === "string" && x.trim().length > 0)
     : [];

@@ -1,0 +1,25 @@
+{
+  "isBot": true,
+  "details": {
+    "hasBotUserAgent": true,
+    "hasWebdriverTrue": false,
+    "hasWebdriverInFrameTrue": false,
+    "isPlaywright": false,
+    "hasInconsistentChromeObject": false,
+    "isPhantom": false,
+    "isNightmare": false,
+    "isSequentum": false,
+    "isSeleniumChromeDefault": false,
+    "isHeadlessChrome": false,
+    "isWebGLInconsistent": false,
+    "isAutomatedWithCDP": true,
+    "isAutomatedWithCDPInWebWorker": true,
+    "hasInconsistentClientHints": false,
+    "hasInconsistentGPUFeatures": false,
+    "isIframeOverridden": false,
+    "hasInconsistentWorkerValues": false,
+    "hasHighHardwareConcurrency": true,
+    "hasHeadlessChromeDefaultScreenResolution": false,
+    "hasSuspiciousWeakSignals": true
+  }
+}

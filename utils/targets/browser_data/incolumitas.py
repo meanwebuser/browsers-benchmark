@@ -67,7 +67,7 @@ return result;
 
     if not parsed_payload:
         logger.warning("%s: failed to extract incolumitas payloads", engine.name)
-        return {"incolumitas_file": ""}
+        return {"incolumitas_file": "", "incolumitas_data": None}
 
     file_path = _save_payload(engine, parsed_payload)
-    return {"incolumitas_file": file_path}
+    return {"incolumitas_file": file_path, "incolumitas_data": parsed_payload}

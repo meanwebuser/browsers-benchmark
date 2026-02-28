@@ -1,0 +1,467 @@
+{
+  "products": {
+    "identification": {
+      "data": {
+        "visitorId": "V05ejzYomx5Y7TbxZ6n4",
+        "requestId": "1772299915094.Amc3GU",
+        "browserDetails": {
+          "browserName": "Firefox",
+          "browserMajorVersion": "147",
+          "browserFullVersion": "147.0",
+          "os": "Windows",
+          "osVersion": "10",
+          "device": "Other",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0"
+        },
+        "incognito": false,
+        "ip": "5.181.169.179",
+        "ipLocation": {
+          "accuracyRadius": 50,
+          "latitude": 60.16952,
+          "longitude": 24.93545,
+          "postalCode": "00100",
+          "timezone": "Europe/Helsinki",
+          "city": {
+            "name": "Helsinki"
+          },
+          "country": {
+            "code": "FI",
+            "name": "Finland"
+          },
+          "continent": {
+            "code": "EU",
+            "name": "Europe"
+          },
+          "subdivisions": [
+            {
+              "isoCode": "18",
+              "name": "Uusimaa"
+            }
+          ]
+        },
+        "timestamp": 1772299915104,
+        "time": "2026-02-28T17:31:55Z",
+        "url": "https://fingerprint.com/demo/",
+        "tag": {
+          "referrerLink": null
+        },
+        "confidence": {
+          "score": 0.99,
+          "revision": "v1.1"
+        },
+        "visitorFound": true,
+        "firstSeenAt": {
+          "global": "2026-02-28T00:47:04.653Z",
+          "subscription": "2026-02-28T00:47:04.653Z"
+        },
+        "lastSeenAt": {
+          "global": "2026-02-28T17:31:41.978Z",
+          "subscription": "2026-02-28T17:31:41.978Z"
+        },
+        "replayed": false,
+        "sdk": {
+          "platform": "js",
+          "version": "4.0.1",
+          "integrations": [
+            {
+              "name": "custom-proxy-integration",
+              "version": "1.0.2"
+            },
+            {
+              "name": "custom-proxy-integration",
+              "version": "1.0.4"
+            },
+            {
+              "name": "fingerprint-pro-custom-subdomain",
+              "version": "2.0.0"
+            },
+            {
+              "name": "fingerprintjs-pro-react",
+              "version": "3.0.0"
+            }
+          ]
+        },
+        "environmentId": "ae_83d51ca3dcde8777"
+      }
+    },
+    "botd": {
+      "data": {
+        "bot": {
+          "result": "bad",
+          "type": "webdriver"
+        },
+        "meta": {
+          "referrerLink": null
+        },
+        "url": "https://fingerprint.com/demo/",
+        "ip": "5.181.169.179",
+        "time": "2026-02-28T17:31:55.147Z",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
+        "requestId": "1772299915094.Amc3GU"
+      }
+    },
+    "rootApps": {
+      "data": {
+        "result": false
+      }
+    },
+    "emulator": {
+      "data": {
+        "result": false
+      }
+    },
+    "ipInfo": {
+      "data": {
+        "v4": {
+          "address": "5.181.169.179",
+          "geolocation": {
+            "accuracyRadius": 50,
+            "latitude": 60.16952,
+            "longitude": 24.93545,
+            "postalCode": "00100",
+            "timezone": "Europe/Helsinki",
+            "city": {
+              "name": "Helsinki"
+            },
+            "country": {
+              "code": "FI",
+              "name": "Finland"
+            },
+            "continent": {
+              "code": "EU",
+              "name": "Europe"
+            },
+            "subdivisions": [
+              {
+                "isoCode": "18",
+                "name": "Uusimaa"
+              }
+            ]
+          },
+          "asn": {
+            "asn": "59651",
+            "name": "AS QualityNetwork",
+            "network": "5.181.168.0/23",
+            "type": "isp"
+          },
+          "datacenter": {
+            "result": true,
+            "name": ""
+          }
+        }
+      }
+    },
+    "ipBlocklist": {
+      "data": {
+        "result": false,
+        "details": {
+          "emailSpam": false,
+          "attackSource": false
+        }
+      }
+    },
+    "tor": {
+      "data": {
+        "result": false
+      }
+    },
+    "vpn": {
+      "data": {
+        "result": true,
+        "confidence": "high",
+        "originTimezone": "Europe/Moscow",
+        "originCountry": "unknown",
+        "methods": {
+          "timezoneMismatch": true,
+          "publicVPN": false,
+          "auxiliaryMobile": false,
+          "osMismatch": true,
+          "relay": false
+        }
+      }
+    },
+    "proxy": {
+      "data": {
+        "result": false,
+        "confidence": "high"
+      }
+    },
+    "incognito": {
+      "data": {
+        "result": false
+      }
+    },
+    "tampering": {
+      "data": {
+        "result": true,
+        "anomalyScore": 1,
+        "antiDetectBrowser": false
+      }
+    },
+    "clonedApp": {
+      "data": {
+        "result": false
+      }
+    },
+    "factoryReset": {
+      "data": {
+        "time": "1970-01-01T00:00:00Z",
+        "timestamp": 0
+      }
+    },
+    "jailbroken": {
+      "data": {
+        "result": false
+      }
+    },
+    "frida": {
+      "data": {
+        "result": false
+      }
+    },
+    "privacySettings": {
+      "data": {
+        "result": false
+      }
+    },
+    "virtualMachine": {
+      "data": {
+        "result": true
+      }
+    },
+    "rawDeviceAttributes": {
+      "data": {
+        "mathML": {
+          "value": {
+            "bottom": 27,
+            "font": "serif",
+            "height": 19,
+            "left": 8,
+            "right": 341.0333251953125,
+            "top": 8,
+            "width": 333.0333251953125,
+            "x": 8,
+            "y": 8
+          }
+        },
+        "monochrome": {
+          "value": 0
+        },
+        "webGlBasics": {},
+        "colorGamut": {
+          "value": "srgb"
+        },
+        "fonts": {
+          "value": [
+            "Batang",
+            "Bitstream Vera Sans Mono",
+            "MS Mincho",
+            "MS UI Gothic",
+            "Meiryo UI",
+            "PMingLiU"
+          ]
+        },
+        "screenResolution": {
+          "value": [
+            768,
+            1366
+          ]
+        },
+        "timezone": {
+          "value": "Europe/Moscow"
+        },
+        "osCpu": {
+          "value": "Linux x86_64"
+        },
+        "cookiesEnabled": {
+          "value": true
+        },
+        "languages": {
+          "value": [
+            [
+              "undefined"
+            ],
+            [
+              "undefined"
+            ]
+          ]
+        },
+        "hardwareConcurrency": {
+          "value": 104
+        },
+        "vendor": {
+          "value": ""
+        },
+        "canvas": {
+          "value": {
+            "Geometry": "b6cabfb3c33585ba83aece6773466de0",
+            "Text": "957d069935d5e0a161e1adf2231e3fdd",
+            "Winding": true
+          }
+        },
+        "math": {
+          "value": "5f030fa7d2e5f9f757bfaf81642eb1a6"
+        },
+        "openDatabase": {
+          "value": false
+        },
+        "forcedColors": {
+          "value": false
+        },
+        "dateTimeLocale": {
+          "value": "en-GB"
+        },
+        "vendorFlavors": {
+          "value": []
+        },
+        "plugins": {
+          "value": []
+        },
+        "domBlockers": {},
+        "webGlExtensions": {
+          "value": -1
+        },
+        "audio": {
+          "value": 35.749972093850374
+        },
+        "platform": {
+          "value": "Linux x86_64"
+        },
+        "pdfViewerEnabled": {
+          "value": false
+        },
+        "audioBaseLatency": {
+          "value": -2
+        },
+        "deviceMemory": {},
+        "privateClickMeasurement": {},
+        "hdr": {
+          "value": false
+        },
+        "fontPreferences": {
+          "value": {
+            "apple": 173.11666870117188,
+            "default": 173.11666870117188,
+            "min": 10.800003051757812,
+            "mono": 122.68333435058594,
+            "sans": 162.01666259765625,
+            "serif": 173.11666870117188,
+            "system": 162.01666259765625
+          }
+        },
+        "reducedMotion": {
+          "value": false
+        },
+        "contrast": {
+          "value": 0
+        },
+        "localStorage": {
+          "value": true
+        },
+        "screenFrame": {
+          "value": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "touchSupport": {
+          "value": {
+            "maxTouchPoints": 0,
+            "touchEvent": false,
+            "touchStart": false
+          }
+        },
+        "colorDepth": {
+          "value": 24
+        },
+        "indexedDB": {
+          "value": true
+        },
+        "invertedColors": {},
+        "architecture": {
+          "value": 255
+        },
+        "emoji": {
+          "value": {
+            "bottom": 27,
+            "font": "serif",
+            "height": 19,
+            "left": 8,
+            "right": 1608,
+            "top": 8,
+            "width": 1600,
+            "x": 8,
+            "y": 8
+          }
+        },
+        "sessionStorage": {
+          "value": true
+        },
+        "cpuClass": {}
+      }
+    },
+    "highActivity": {
+      "data": {
+        "result": false
+      }
+    },
+    "locationSpoofing": {
+      "data": {
+        "result": false
+      }
+    },
+    "suspectScore": {
+      "data": {
+        "result": 30
+      }
+    },
+    "velocity": {
+      "data": {
+        "distinctIp": {
+          "intervals": {
+            "5m": 2,
+            "1h": 2,
+            "24h": 3
+          }
+        },
+        "distinctLinkedId": {},
+        "distinctCountry": {
+          "intervals": {
+            "5m": 2,
+            "1h": 2,
+            "24h": 3
+          }
+        },
+        "events": {
+          "intervals": {
+            "5m": 2,
+            "1h": 2,
+            "24h": 3
+          }
+        },
+        "ipEvents": {
+          "intervals": {
+            "5m": 1,
+            "1h": 1,
+            "24h": 1
+          }
+        },
+        "distinctIpByLinkedId": {},
+        "distinctVisitorIdByLinkedId": {}
+      }
+    },
+    "developerTools": {
+      "data": {
+        "result": true
+      }
+    },
+    "mitmAttack": {
+      "data": {
+        "result": false
+      }
+    },
+    "proximity": {}
+  }
+}

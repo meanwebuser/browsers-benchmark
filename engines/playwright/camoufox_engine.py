@@ -129,3 +129,40 @@ class CamoufoxEngine(PlaywrightBase):
 
         self._stop_virtual_display()
         self.process_list = None
+
+    async def reload_page(self):
+        """
+        Reload the current page.
+
+        Camoufox may occasionally never resolve Playwright's reload navigation wait.
+        In that case, fallback to JS-triggered reload and wait for readyState.
+        """
+
+        if not self.page:
+            raise RuntimeError("Browser not started")
+
+        start_time = asyncio.get_event_loop().time()
+        response = None
+        success = False
+
+        try:
+            response = await self.page.reload(timeout=settings.browser.page_load_timeout_s * 1000)
+            success = response.ok if response else False
+        except Exception:
+            try:
+                await self.page.evaluate("window.location.reload();")
+                await self.page.wait_for_function(
+                    "() => document.readyState === 'complete'",
+                    timeout=settings.browser.page_load_timeout_s * 1000,
+                )
+                success = True
+            except Exception:
+                success = False
+
+        end_time = asyncio.get_event_loop().time()
+        return {
+            "url": self.page.url if self.page else "",
+            "load_time": end_time - start_time,
+            "success": success,
+            "headers": response.headers if response else {},
+        }

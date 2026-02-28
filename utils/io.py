@@ -67,12 +67,15 @@ def save_results(results: BenchmarkResults, result_path: str) -> str:
                 "suspect_score": r.suspect_score,
                 "fingerprint_webrtc_ip": r.fingerprint_webrtc_ip,
                 "fingerprint_demo_file": r.fingerprint_demo_file,
+                "fingerprint_demo_data": r.fingerprint_demo_data,
                 "recaptcha_score": r.recaptcha_score,
                 "ip": r.ip,
                 "incolumitas_file": r.incolumitas_file,
+                "incolumitas_data": r.incolumitas_data,
                 "deviceandbrowserinfo_is_bot": r.deviceandbrowserinfo_is_bot,
                 "deviceandbrowserinfo_file": r.deviceandbrowserinfo_file,
                 "deviceandbrowserinfo_suspect_score": r.deviceandbrowserinfo_suspect_score,
+                "deviceandbrowserinfo_data": r.deviceandbrowserinfo_data,
                 "scan_fingerprint_bot_risk_score": r.scan_fingerprint_bot_risk_score
             } for r in results.browser_data_targets_results
         ],

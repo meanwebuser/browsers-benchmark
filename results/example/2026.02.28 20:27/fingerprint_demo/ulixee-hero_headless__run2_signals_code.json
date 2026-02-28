@@ -1,0 +1,548 @@
+{
+  "products": {
+    "identification": {
+      "data": {
+        "visitorId": "wkcxFINv8C6cnuSMvbg0",
+        "requestId": "1772299926854.vNWnbG",
+        "browserDetails": {
+          "browserName": "Chrome",
+          "browserMajorVersion": "144",
+          "browserFullVersion": "144.0.0",
+          "os": "Windows",
+          "osVersion": "10",
+          "device": "Other",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+        },
+        "incognito": false,
+        "ip": "PUBLIC_IP_REDACTED",
+        "ipLocation": {
+          "accuracyRadius": 50,
+          "latitude": 55.75204,
+          "longitude": 37.61781,
+          "postalCode": "101000",
+          "timezone": "Europe/Moscow",
+          "city": {
+            "name": "Moscow"
+          },
+          "country": {
+            "code": "RU",
+            "name": "Russia"
+          },
+          "continent": {
+            "code": "EU",
+            "name": "Europe"
+          },
+          "subdivisions": [
+            {
+              "isoCode": "MOW",
+              "name": "Moscow"
+            }
+          ]
+        },
+        "timestamp": 1772299926864,
+        "time": "2026-02-28T17:32:06Z",
+        "url": "https://fingerprint.com/demo/",
+        "tag": {
+          "referrerLink": null
+        },
+        "confidence": {
+          "score": 1,
+          "revision": "v1.1"
+        },
+        "visitorFound": false,
+        "firstSeenAt": {
+          "global": "2026-02-28T17:32:06.864Z",
+          "subscription": "2026-02-28T17:32:06.864Z"
+        },
+        "lastSeenAt": {
+          "global": null,
+          "subscription": null
+        },
+        "replayed": false,
+        "sdk": {
+          "platform": "js",
+          "version": "4.0.1",
+          "integrations": [
+            {
+              "name": "custom-proxy-integration",
+              "version": "1.0.2"
+            },
+            {
+              "name": "custom-proxy-integration",
+              "version": "1.0.4"
+            },
+            {
+              "name": "fingerprint-pro-custom-subdomain",
+              "version": "2.0.0"
+            },
+            {
+              "name": "fingerprintjs-pro-react",
+              "version": "3.0.0"
+            }
+          ]
+        },
+        "environmentId": "ae_83d51ca3dcde8777"
+      }
+    },
+    "botd": {
+      "data": {
+        "bot": {
+          "result": "bad",
+          "type": "nodriver"
+        },
+        "meta": {
+          "referrerLink": null
+        },
+        "url": "https://fingerprint.com/demo/",
+        "ip": "PUBLIC_IP_REDACTED",
+        "time": "2026-02-28T17:32:06.901Z",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        "requestId": "1772299926854.vNWnbG"
+      }
+    },
+    "rootApps": {
+      "data": {
+        "result": false
+      }
+    },
+    "emulator": {
+      "data": {
+        "result": false
+      }
+    },
+    "ipInfo": {
+      "data": {
+        "v4": {
+          "address": "PUBLIC_IP_REDACTED",
+          "geolocation": {
+            "accuracyRadius": 50,
+            "latitude": 55.75204,
+            "longitude": 37.61781,
+            "postalCode": "101000",
+            "timezone": "Europe/Moscow",
+            "city": {
+              "name": "Moscow"
+            },
+            "country": {
+              "code": "RU",
+              "name": "Russia"
+            },
+            "continent": {
+              "code": "EU",
+              "name": "Europe"
+            },
+            "subdivisions": [
+              {
+                "isoCode": "MOW",
+                "name": "Moscow"
+              }
+            ]
+          },
+          "asn": {
+            "asn": "25513",
+            "name": "PJSC Moscow city telephone network",
+            "network": "95.165.128.0/17",
+            "type": "isp"
+          },
+          "datacenter": {
+            "result": false,
+            "name": ""
+          }
+        }
+      }
+    },
+    "ipBlocklist": {
+      "data": {
+        "result": false,
+        "details": {
+          "emailSpam": false,
+          "attackSource": false
+        }
+      }
+    },
+    "tor": {
+      "data": {
+        "result": false
+      }
+    },
+    "vpn": {
+      "data": {
+        "result": true,
+        "confidence": "high",
+        "originTimezone": "Europe/Moscow",
+        "originCountry": "unknown",
+        "methods": {
+          "timezoneMismatch": false,
+          "publicVPN": false,
+          "auxiliaryMobile": false,
+          "osMismatch": true,
+          "relay": false
+        }
+      }
+    },
+    "proxy": {
+      "data": {
+        "result": false,
+        "confidence": "high"
+      }
+    },
+    "incognito": {
+      "data": {
+        "result": false
+      }
+    },
+    "tampering": {
+      "data": {
+        "result": true,
+        "anomalyScore": 0.4888,
+        "antiDetectBrowser": true
+      }
+    },
+    "clonedApp": {
+      "data": {
+        "result": false
+      }
+    },
+    "factoryReset": {
+      "data": {
+        "time": "1970-01-01T00:00:00Z",
+        "timestamp": 0
+      }
+    },
+    "jailbroken": {
+      "data": {
+        "result": false
+      }
+    },
+    "frida": {
+      "data": {
+        "result": false
+      }
+    },
+    "privacySettings": {
+      "data": {
+        "result": false
+      }
+    },
+    "virtualMachine": {
+      "data": {
+        "result": true
+      }
+    },
+    "rawDeviceAttributes": {
+      "data": {
+        "languages": {
+          "value": [
+            [
+              "en-US"
+            ]
+          ]
+        },
+        "indexedDB": {
+          "value": true
+        },
+        "cpuClass": {},
+        "fontPreferences": {
+          "value": {
+            "apple": 149.3125,
+            "default": 149.3125,
+            "min": 9.34375,
+            "mono": 132.625,
+            "sans": 144.015625,
+            "serif": 149.3125,
+            "system": 162
+          }
+        },
+        "math": {
+          "value": "5963cfe25fe61d0bbd7b4920bc602dc8"
+        },
+        "colorGamut": {
+          "value": "srgb"
+        },
+        "webGlExtensions": {
+          "value": {
+            "contextAttributes": "6b1ed336830d2bc96442a9d76373252a",
+            "extensionParameters": "c07876cd8dfe959b64d3fc298def4ec1",
+            "extensions": "f95eef1c7cf85fcc59a7ccc9274126be",
+            "parameters": "20c6a6cb52744536eb50f17329a3f484",
+            "shaderPrecisions": "f223dfbcd580cf142da156d93790eb83",
+            "unsupportedExtensions": []
+          }
+        },
+        "vendorFlavors": {
+          "value": [
+            "chrome"
+          ]
+        },
+        "platform": {
+          "value": "Win32"
+        },
+        "hardwareConcurrency": {
+          "value": 104
+        },
+        "reducedMotion": {
+          "value": false
+        },
+        "emoji": {
+          "value": {
+            "bottom": 26,
+            "font": "\"Times New Roman\"",
+            "height": 17,
+            "left": 8,
+            "right": 1608,
+            "top": 9,
+            "width": 1600,
+            "x": 8,
+            "y": 9
+          }
+        },
+        "touchSupport": {
+          "value": {
+            "maxTouchPoints": 0,
+            "touchEvent": false,
+            "touchStart": false
+          }
+        },
+        "openDatabase": {
+          "value": true
+        },
+        "forcedColors": {
+          "value": false
+        },
+        "plugins": {
+          "value": [
+            {
+              "description": "Portable Document Format",
+              "mimeTypes": [
+                {
+                  "suffixes": "pdf",
+                  "type": "application/pdf"
+                },
+                {
+                  "suffixes": "pdf",
+                  "type": "text/pdf"
+                }
+              ],
+              "name": "PDF Viewer"
+            },
+            {
+              "description": "Portable Document Format",
+              "mimeTypes": [
+                {
+                  "suffixes": "pdf",
+                  "type": "application/pdf"
+                },
+                {
+                  "suffixes": "pdf",
+                  "type": "text/pdf"
+                }
+              ],
+              "name": "Chrome PDF Viewer"
+            },
+            {
+              "description": "Portable Document Format",
+              "mimeTypes": [
+                {
+                  "suffixes": "pdf",
+                  "type": "application/pdf"
+                },
+                {
+                  "suffixes": "pdf",
+                  "type": "text/pdf"
+                }
+              ],
+              "name": "Chromium PDF Viewer"
+            },
+            {
+              "description": "Portable Document Format",
+              "mimeTypes": [
+                {
+                  "suffixes": "pdf",
+                  "type": "application/pdf"
+                },
+                {
+                  "suffixes": "pdf",
+                  "type": "text/pdf"
+                }
+              ],
+              "name": "Microsoft Edge PDF Viewer"
+            },
+            {
+              "description": "Portable Document Format",
+              "mimeTypes": [
+                {
+                  "suffixes": "pdf",
+                  "type": "application/pdf"
+                },
+                {
+                  "suffixes": "pdf",
+                  "type": "text/pdf"
+                }
+              ],
+              "name": "WebKit built-in PDF"
+            }
+          ]
+        },
+        "sessionStorage": {
+          "value": true
+        },
+        "invertedColors": {},
+        "osCpu": {},
+        "hdr": {
+          "value": false
+        },
+        "domBlockers": {},
+        "architecture": {
+          "value": 255
+        },
+        "canvas": {
+          "value": {
+            "Geometry": "66d32db3dfa9c4eb772d102e560df4b5",
+            "Text": "2cdb457500cb2c14b24326ec6516d080",
+            "Winding": true
+          }
+        },
+        "screenResolution": {
+          "value": [
+            900,
+            1440
+          ]
+        },
+        "audio": {
+          "value": 124.04347527516074
+        },
+        "mathML": {
+          "value": {
+            "bottom": 25,
+            "font": "\"Times New Roman\"",
+            "height": 17,
+            "left": 8,
+            "right": 273.734375,
+            "top": 8,
+            "width": 265.734375,
+            "x": 8,
+            "y": 8
+          }
+        },
+        "pdfViewerEnabled": {
+          "value": true
+        },
+        "contrast": {
+          "value": 0
+        },
+        "screenFrame": {
+          "value": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "webGlBasics": {
+          "value": {
+            "renderer": "WebKit WebGL",
+            "rendererUnmasked": "Intel Iris OpenGL Engine",
+            "shadingLanguageVersion": "WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)",
+            "vendor": "WebKit",
+            "vendorUnmasked": "Intel Inc.",
+            "version": "WebGL 1.0 (OpenGL ES 2.0 Chromium)"
+          }
+        },
+        "vendor": {
+          "value": "Google Inc."
+        },
+        "deviceMemory": {
+          "value": 2
+        },
+        "dateTimeLocale": {
+          "value": "en"
+        },
+        "localStorage": {
+          "value": true
+        },
+        "cookiesEnabled": {
+          "value": true
+        },
+        "audioBaseLatency": {
+          "value": -2
+        },
+        "privateClickMeasurement": {},
+        "colorDepth": {
+          "value": 24
+        },
+        "fonts": {
+          "value": [
+            "PMingLiU"
+          ]
+        },
+        "monochrome": {
+          "value": 0
+        },
+        "timezone": {
+          "value": "Europe/Moscow"
+        }
+      }
+    },
+    "highActivity": {
+      "data": {
+        "result": false
+      }
+    },
+    "locationSpoofing": {
+      "data": {
+        "result": false
+      }
+    },
+    "suspectScore": {
+      "data": {
+        "result": 19
+      }
+    },
+    "velocity": {
+      "data": {
+        "distinctIp": {
+          "intervals": {
+            "5m": 1,
+            "1h": 1,
+            "24h": 1
+          }
+        },
+        "distinctLinkedId": {},
+        "distinctCountry": {
+          "intervals": {
+            "5m": 1,
+            "1h": 1,
+            "24h": 1
+          }
+        },
+        "events": {
+          "intervals": {
+            "5m": 1,
+            "1h": 1,
+            "24h": 1
+          }
+        },
+        "ipEvents": {
+          "intervals": {
+            "5m": 2,
+            "1h": 2,
+            "24h": 31
+          }
+        },
+        "distinctIpByLinkedId": {},
+        "distinctVisitorIdByLinkedId": {}
+      }
+    },
+    "developerTools": {
+      "data": {
+        "result": false
+      }
+    },
+    "mitmAttack": {
+      "data": {
+        "result": false
+      }
+    },
+    "proximity": {}
+  }
+}

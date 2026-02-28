@@ -1,0 +1,460 @@
+{
+  "webWorkerRes": {
+    "userAgent": "\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36\"",
+    "appVersion": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36\"",
+    "platform": "Linux x86_64",
+    "deviceMemory": 8,
+    "hardwareConcurrency": 104,
+    "language": "ru-RU",
+    "languages": [
+      "ru-RU",
+      "ru",
+      "en-US",
+      "en"
+    ]
+  },
+  "fp": {
+    "byteLength": "unknown",
+    "appVersion": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36\"",
+    "onLine": true,
+    "doNotTrack": null,
+    "hardwareConcurrency": 104,
+    "timezone": -180,
+    "timezone2": "Europe/Moscow",
+    "systemTime": "Sat Feb 28 2026 20:38:13 GMT+0300 (Москва, стандартное время)",
+    "getTimezoneOffset": -180,
+    "toLocaleString": "28.02.2026, 20:38:13",
+    "historyLength": 12,
+    "indexedDB": true,
+    "openDatabase": false,
+    "product": "Gecko",
+    "fmget": false,
+    "domAutomation": false,
+    "cookieEnabled": true,
+    "sendBeaconAvailable": true,
+    "appName": "Netscape",
+    "vendor": "Google Inc.",
+    "appCodeName": "Mozilla",
+    "userMediaAvailable": true,
+    "javaEnabled": false,
+    "batteryDetails": {
+      "charging": true,
+      "chargingTime": 0,
+      "dischargingTime": null,
+      "level": 1
+    },
+    "plugins": [
+      "PDF Viewer::Portable Document Format::internal-pdf-viewer::__application/pdf~pdf~Portable Document Format,text/pdf~pdf~Portable Document Format",
+      "Chrome PDF Viewer::Portable Document Format::internal-pdf-viewer::__application/pdf~pdf~Portable Document Format,text/pdf~pdf~Portable Document Format",
+      "Chromium PDF Viewer::Portable Document Format::internal-pdf-viewer::__application/pdf~pdf~Portable Document Format,text/pdf~pdf~Portable Document Format",
+      "Microsoft Edge PDF Viewer::Portable Document Format::internal-pdf-viewer::__application/pdf~pdf~Portable Document Format,text/pdf~pdf~Portable Document Format",
+      "WebKit built-in PDF::Portable Document Format::internal-pdf-viewer::__application/pdf~pdf~Portable Document Format,text/pdf~pdf~Portable Document Format"
+    ],
+    "mimeTypes": [
+      "Portable Document Format~~application/pdf~~pdf",
+      "Portable Document Format~~text/pdf~~pdf"
+    ],
+    "userAgent": "\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36\"",
+    "platform": "Linux x86_64",
+    "language": "ru-RU",
+    "languages": [
+      "ru-RU",
+      "ru",
+      "en-US",
+      "en"
+    ],
+    "screen": {
+      "wInnerHeight": 459,
+      "wOuterHeight": 580,
+      "wOuterWidth": 780,
+      "wInnerWidth": 780,
+      "wScreenX": 10,
+      "wPageXOffset": 0,
+      "wPageYOffset": 0,
+      "cWidth": 765,
+      "cHeight": 5844,
+      "sWidth": 800,
+      "sHeight": 600,
+      "sAvailWidth": 800,
+      "sAvailHeight": 600,
+      "sColorDepth": 24,
+      "sPixelDepth": 24,
+      "wDevicePixelRatio": 1
+    },
+    "touchScreen": [
+      0,
+      false,
+      false
+    ],
+    "videoCard": [
+      "Google Inc. (Google)",
+      "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    ],
+    "multimediaDevices": {
+      "speakers": 0,
+      "micros": 0,
+      "webcams": 0
+    },
+    "productSub": "20030107",
+    "navigatorPrototype": [
+      "vendorSub~~~function get vendorSub() { [native code] }",
+      "productSub~~~function get productSub() { [native code] }",
+      "vendor~~~function get vendor() { [native code] }",
+      "maxTouchPoints~~~function get maxTouchPoints() { [native code] }",
+      "scheduling~~~function get scheduling() { [native code] }",
+      "userActivation~~~function get userActivation() { [native code] }",
+      "doNotTrack~~~function get doNotTrack() { [native code] }",
+      "geolocation~~~function get geolocation() { [native code] }",
+      "connection~~~function get connection() { [native code] }",
+      "plugins~~~function get plugins() { [native code] }",
+      "mimeTypes~~~function get mimeTypes() { [native code] }",
+      "pdfViewerEnabled~~~function get pdfViewerEnabled() { [native code] }",
+      "webkitTemporaryStorage~~~function get webkitTemporaryStorage() { [native code] }",
+      "webkitPersistentStorage~~~function get webkitPersistentStorage() { [native code] }",
+      "hardwareConcurrency~~~function get hardwareConcurrency() { [native code] }",
+      "cookieEnabled~~~function get cookieEnabled() { [native code] }",
+      "appCodeName~~~function get appCodeName() { [native code] }",
+      "appName~~~function get appName() { [native code] }",
+      "appVersion~~~function get appVersion() { [native code] }",
+      "platform~~~function get platform() { [native code] }",
+      "product~~~function get product() { [native code] }",
+      "userAgent~~~function get userAgent() { [native code] }",
+      "language~~~function get language() { [native code] }",
+      "languages~~~function get languages() { [native code] }",
+      "onLine~~~function get onLine() { [native code] }",
+      "webdriver~~~function get webdriver() { [native code] }",
+      "getGamepads~~~function getGamepads() { [native code] }",
+      "javaEnabled~~~function javaEnabled() { [native code] }",
+      "sendBeacon~~~function sendBeacon() { [native code] }",
+      "vibrate~~~function vibrate() { [native code] }",
+      "constructor~~~function Navigator() { [native code] }",
+      "clipboard~~~function get clipboard() { [native code] }",
+      "credentials~~~function get credentials() { [native code] }",
+      "keyboard~~~function get keyboard() { [native code] }",
+      "managed~~~function get managed() { [native code] }",
+      "mediaDevices~~~function get mediaDevices() { [native code] }",
+      "storage~~~function get storage() { [native code] }",
+      "serviceWorker~~~function get serviceWorker() { [native code] }",
+      "virtualKeyboard~~~function get virtualKeyboard() { [native code] }",
+      "wakeLock~~~function get wakeLock() { [native code] }",
+      "deviceMemory~~~function get deviceMemory() { [native code] }",
+      "ink~~~function get ink() { [native code] }",
+      "hid~~~function get hid() { [native code] }",
+      "locks~~~function get locks() { [native code] }",
+      "gpu~~~function get gpu() { [native code] }",
+      "mediaCapabilities~~~function get mediaCapabilities() { [native code] }",
+      "mediaSession~~~function get mediaSession() { [native code] }",
+      "permissions~~~function get permissions() { [native code] }",
+      "presentation~~~function get presentation() { [native code] }",
+      "usb~~~function get usb() { [native code] }",
+      "xr~~~function get xr() { [native code] }",
+      "serial~~~function get serial() { [native code] }",
+      "windowControlsOverlay~~~function get windowControlsOverlay() { [native code] }",
+      "userAgentData~~~function get userAgentData() { [native code] }",
+      "clearAppBadge~~~function clearAppBadge() { [native code] }",
+      "getBattery~~~function getBattery() { [native code] }",
+      "getUserMedia~~~function getUserMedia() { [native code] }",
+      "requestMIDIAccess~~~function requestMIDIAccess() { [native code] }",
+      "requestMediaKeySystemAccess~~~function requestMediaKeySystemAccess() { [native code] }",
+      "setAppBadge~~~function setAppBadge() { [native code] }",
+      "webkitGetUserMedia~~~function webkitGetUserMedia() { [native code] }",
+      "getInstalledRelatedApps~~~function getInstalledRelatedApps() { [native code] }",
+      "registerProtocolHandler~~~function registerProtocolHandler() { [native code] }",
+      "unregisterProtocolHandler~~~function unregisterProtocolHandler() { [native code] }",
+      "constructor~~~function Navigator() { [native code] }",
+      "__defineGetter__~~~",
+      "__defineSetter__~~~",
+      "hasOwnProperty~~~",
+      "__lookupGetter__~~~",
+      "__lookupSetter__~~~",
+      "isPrototypeOf~~~",
+      "propertyIsEnumerable~~~",
+      "toString~~~",
+      "valueOf~~~",
+      "__proto__~~~",
+      "toLocaleString~~~"
+    ],
+    "navigatorProperties": [
+      "vendorSub",
+      "productSub",
+      "vendor",
+      "maxTouchPoints",
+      "scheduling",
+      "userActivation",
+      "doNotTrack",
+      "geolocation",
+      "connection",
+      "plugins",
+      "mimeTypes",
+      "pdfViewerEnabled",
+      "webkitTemporaryStorage",
+      "webkitPersistentStorage",
+      "hardwareConcurrency",
+      "cookieEnabled",
+      "appCodeName",
+      "appName",
+      "appVersion",
+      "platform",
+      "product",
+      "userAgent",
+      "language",
+      "languages",
+      "onLine",
+      "webdriver",
+      "getGamepads",
+      "javaEnabled",
+      "sendBeacon",
+      "vibrate",
+      "constructor",
+      "clipboard",
+      "credentials",
+      "keyboard",
+      "managed",
+      "mediaDevices",
+      "storage",
+      "serviceWorker",
+      "virtualKeyboard",
+      "wakeLock",
+      "deviceMemory",
+      "ink",
+      "hid",
+      "locks",
+      "gpu",
+      "mediaCapabilities",
+      "mediaSession",
+      "permissions",
+      "presentation",
+      "usb",
+      "xr",
+      "serial",
+      "windowControlsOverlay",
+      "userAgentData",
+      "clearAppBadge",
+      "getBattery",
+      "getUserMedia",
+      "requestMIDIAccess",
+      "requestMediaKeySystemAccess",
+      "setAppBadge",
+      "webkitGetUserMedia",
+      "getInstalledRelatedApps",
+      "registerProtocolHandler",
+      "unregisterProtocolHandler",
+      "constructor",
+      "__defineGetter__",
+      "__defineSetter__",
+      "hasOwnProperty",
+      "__lookupGetter__",
+      "__lookupSetter__",
+      "isPrototypeOf",
+      "propertyIsEnumerable",
+      "toString",
+      "valueOf",
+      "__proto__",
+      "toLocaleString"
+    ],
+    "etsl": 33,
+    "screenDesc": "function get width() { [native code] }",
+    "phantomJS": [
+      false,
+      false,
+      false
+    ],
+    "nightmareJS": false,
+    "selenium": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "webDriver": true,
+    "webDriverValue": false,
+    "errorsGenerated": [
+      "azeaze is not defined",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "Failed to construct 'WebSocket': The URL 'itsgonnafail' is invalid."
+    ],
+    "resOverflow": {
+      "depth": 9649,
+      "errorMessage": "Maximum call stack size exceeded",
+      "errorName": "RangeError",
+      "errorStacklength": 864
+    },
+    "accelerometerUsed": false,
+    "screenMediaQuery": true,
+    "hasChrome": true,
+    "detailChrome": {
+      "webstore": "TypeError: Cannot read properties of undefined (reading 'constructor')",
+      "runtime": "TypeError: Cannot read properties of undefined (reading 'constructor')",
+      "app": "function Object() { [native code] }",
+      "csi": "function Function() { [native code] }",
+      "loadTimes": "function Function() { [native code] }",
+      "connect": "Cannot read properties of undefined (reading 'connect')",
+      "sendMessage": "Cannot read properties of undefined (reading 'sendMessage')"
+    },
+    "permissions": {
+      "state": "prompt",
+      "permission": "default"
+    },
+    "allPermissions": {
+      "ambient-light-sensor": {
+        "error": "TypeError: Failed to execute 'query' on 'Permissions': GenericSensorExtraClasses flag is not enabled."
+      },
+      "bluetooth": {
+        "error": "TypeError: Failed to execute 'query' on 'Permissions': Failed to read the 'name' property from 'PermissionDescriptor': The provided value 'bluetooth' is not a valid enum value of type PermissionName."
+      },
+      "device-info": {
+        "error": "TypeError: Failed to execute 'query' on 'Permissions': Failed to read the 'name' property from 'PermissionDescriptor': The provided value 'device-info' is not a valid enum value of type PermissionName."
+      },
+      "nfc": {
+        "error": "TypeError: Failed to execute 'query' on 'Permissions': Web NFC is not enabled."
+      },
+      "push": {
+        "error": "NotSupportedError: Failed to execute 'query' on 'Permissions': Push Permission without userVisibleOnly:true isn't supported yet."
+      },
+      "speaker-selection": {
+        "error": "TypeError: Failed to execute 'query' on 'Permissions': Failed to read the 'name' property from 'PermissionDescriptor': The provided value 'speaker-selection' is not a valid enum value of type PermissionName."
+      },
+      "accelerometer": {
+        "state": "granted",
+        "permission": "default"
+      },
+      "background-fetch": {
+        "state": "granted",
+        "permission": "default"
+      },
+      "background-sync": {
+        "state": "granted",
+        "permission": "default"
+      },
+      "camera": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "clipboard-write": {
+        "state": "granted",
+        "permission": "default"
+      },
+      "display-capture": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "geolocation": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "gyroscope": {
+        "state": "granted",
+        "permission": "default"
+      },
+      "magnetometer": {
+        "state": "granted",
+        "permission": "default"
+      },
+      "microphone": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "midi": {
+        "state": "granted",
+        "permission": "default"
+      },
+      "notifications": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "persistent-storage": {
+        "state": "prompt",
+        "permission": "default"
+      }
+    },
+    "iframeChrome": "object",
+    "debugTool": false,
+    "battery": true,
+    "deviceMemory": 8,
+    "tpCanvas": {
+      "0": 0,
+      "1": 0,
+      "2": 0,
+      "3": 0
+    },
+    "sequentum": false,
+    "audioCodecs": {
+      "ogg": "probably",
+      "mp3": "probably",
+      "wav": "probably",
+      "m4a": "maybe",
+      "aac": "probably"
+    },
+    "videoCodecs": {
+      "ogg": "probably",
+      "h264": "probably",
+      "webm": "probably",
+      "mpeg4v": "",
+      "mpeg4a": "",
+      "theora": ""
+    },
+    "webSocketSupportTimeout": true
+  },
+  "detection-tests": {
+    "intoli": {
+      "userAgent": "OK",
+      "webDriver": "OK",
+      "webDriverAdvanced": "OK",
+      "pluginsLength": "OK",
+      "pluginArray": "OK",
+      "languages": "OK"
+    },
+    "fpscanner": {
+      "PHANTOM_UA": "OK",
+      "PHANTOM_PROPERTIES": "OK",
+      "PHANTOM_ETSL": "OK",
+      "PHANTOM_LANGUAGE": "OK",
+      "PHANTOM_WEBSOCKET": "OK",
+      "MQ_SCREEN": "OK",
+      "PHANTOM_OVERFLOW": "OK",
+      "PHANTOM_WINDOW_HEIGHT": "OK",
+      "HEADCHR_UA": "OK",
+      "WEBDRIVER": "FAIL",
+      "HEADCHR_CHROME_OBJ": "OK",
+      "HEADCHR_PERMISSIONS": "OK",
+      "HEADCHR_PLUGINS": "OK",
+      "HEADCHR_IFRAME": "OK",
+      "CHR_DEBUG_TOOLS": "OK",
+      "SELENIUM_DRIVER": "OK",
+      "CHR_BATTERY": "OK",
+      "CHR_MEMORY": "OK",
+      "TRANSPARENT_PIXEL": "OK",
+      "SEQUENTUM": "OK",
+      "VIDEO_CODECS": "OK"
+    }
+  },
+  "new-tests": {
+    "puppeteerEvaluationScript": "OK",
+    "webdriverPresent": "OK",
+    "connectionRTT": "OK",
+    "refMatch": "OK",
+    "overrideTest": "OK",
+    "overflowTest": "OK",
+    "puppeteerExtraStealthUsed": "OK",
+    "inconsistentWebWorkerNavigatorPropery": "OK",
+    "inconsistentServiceWorkerNavigatorPropery": "OK"
+  }
+}

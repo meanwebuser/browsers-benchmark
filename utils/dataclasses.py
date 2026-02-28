@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Any, List, Optional
 
 
 @dataclass
@@ -49,16 +49,19 @@ class BrowserDataResult:
     fingerprint_webrtc_ip: Optional[str] = None
     # fingerprint.com demo raw payload file
     fingerprint_demo_file: Optional[str] = None
+    fingerprint_demo_data: Optional[dict[str, Any]] = None
     # recaptcha data
     recaptcha_score: Optional[float] = None
     # IP data
     ip: Optional[str] = None
     # incolumitas payload file
     incolumitas_file: Optional[str] = None
+    incolumitas_data: Optional[dict[str, Any]] = None
     # deviceandbrowserinfo results
     deviceandbrowserinfo_is_bot: Optional[bool] = None
     deviceandbrowserinfo_file: Optional[str] = None
     deviceandbrowserinfo_suspect_score: Optional[float] = None
+    deviceandbrowserinfo_data: Optional[dict[str, Any]] = None
     # fingerprint-scan score
     scan_fingerprint_bot_risk_score: Optional[int] = None
 

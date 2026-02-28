@@ -51,7 +51,13 @@ def generate_report(results_file: str, output_dir: Optional[str] = None) -> None
         image_paths = _generate_all_visualizations(bypass_df, browser_data_df, media_output_dir)
 
         # generate markdown summary
-        generate_markdown_summary(bypass_df, browser_data_df, output_dir, image_paths)
+        generate_markdown_summary(
+            bypass_df=bypass_df,
+            browser_data_df=browser_data_df,
+            output_dir=output_dir,
+            image_paths=image_paths,
+            raw_results=results,
+        )
 
         logger.info(f"Report generated successfully in {output_dir}")
 

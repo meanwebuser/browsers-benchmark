@@ -1,0 +1,18 @@
+{
+  "webWorkerRes": {
+    "raw": "started..."
+  },
+  "fp": {},
+  "detection-tests": {
+    "intoli": {
+      "userAgent": "OK",
+      "webDriver": "FAIL",
+      "webDriverAdvanced": "FAIL",
+      "pluginsLength": "FAIL",
+      "pluginArray": "FAIL",
+      "languages": "OK"
+    },
+    "fpscanner": {}
+  },
+  "new-tests": {}
+}

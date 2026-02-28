@@ -1,0 +1,408 @@
+{
+  "webWorkerRes": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",
+    "appVersion": "5.0 (X11)",
+    "platform": "Linux x86_64",
+    "hardwareConcurrency": 104,
+    "language": "en-US",
+    "languages": [
+      "en-US",
+      "en"
+    ]
+  },
+  "fp": {
+    "byteLength": "unknown",
+    "appVersion": "5.0 (X11)",
+    "onLine": true,
+    "doNotTrack": "1",
+    "hardwareConcurrency": 104,
+    "oscpu": "Linux x86_64",
+    "timezone": -180,
+    "timezone2": "Europe/Moscow",
+    "systemTime": "Sat Feb 28 2026 20:38:59 GMT+0300 (Москва, стандартное время)",
+    "getTimezoneOffset": -180,
+    "toLocaleString": "28/02/2026, 20:38:59",
+    "historyLength": 11,
+    "indexedDB": true,
+    "openDatabase": false,
+    "product": "Gecko",
+    "fmget": false,
+    "domAutomation": false,
+    "cookieEnabled": true,
+    "sendBeaconAvailable": true,
+    "appName": "Netscape",
+    "vendor": "",
+    "appCodeName": "Mozilla",
+    "userMediaAvailable": false,
+    "javaEnabled": false,
+    "batteryDetails": {
+      "error": true,
+      "message": "TypeError: navigator.getBattery is not a function"
+    },
+    "plugins": [
+      "Chrome PDF Plugin::Portable Document Format::internal-pdf-viewer::__application/x-google-chrome-pdf~pdf~Portable Document Format",
+      "Chrome PDF Viewer::::mhjfbmdgcfjbbpaeojofohoefgiehjai::__application/pdf~pdf~",
+      "Native Client::::internal-nacl-plugin::__application/x-nacl~~Native Client Executable,application/x-pnacl~~Portable Native Client Executable"
+    ],
+    "mimeTypes": [
+      "~~application/pdf~~pdf",
+      "Portable Document Format~~application/x-google-chrome-pdf~~pdf",
+      "Native Client Executable~~application/x-nacl~~",
+      "Portable Native Client Executable~~application/x-pnacl~~"
+    ],
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",
+    "platform": "Win64",
+    "language": "undefined",
+    "languages": [
+      "ro",
+      "*"
+    ],
+    "screen": {
+      "wInnerHeight": 720,
+      "wOuterHeight": 806,
+      "wOuterWidth": 1280,
+      "wInnerWidth": 1280,
+      "wScreenX": 0,
+      "wPageXOffset": 0,
+      "wPageYOffset": 0,
+      "cWidth": 1280,
+      "cHeight": 5520,
+      "sWidth": 1366,
+      "sHeight": 768,
+      "sAvailWidth": 1366,
+      "sAvailHeight": 768,
+      "sColorDepth": 24,
+      "sPixelDepth": 24,
+      "wDevicePixelRatio": 1
+    },
+    "touchScreen": [
+      0,
+      false,
+      false
+    ],
+    "videoCard": "Not supported",
+    "multimediaDevices": {
+      "speakers": 0,
+      "micros": 0,
+      "webcams": 0
+    },
+    "productSub": "20100101",
+    "navigatorPrototype": [
+      "javaEnabled~~~function javaEnabled() {\n    [native code]\n}",
+      "getGamepads~~~function getGamepads() {\n    [native code]\n}",
+      "requestMIDIAccess~~~function requestMIDIAccess() {\n    [native code]\n}",
+      "mozGetUserMedia~~~function mozGetUserMedia() {\n    [native code]\n}",
+      "sendBeacon~~~function sendBeacon() {\n    [native code]\n}",
+      "requestMediaKeySystemAccess~~~function requestMediaKeySystemAccess() {\n    [native code]\n}",
+      "getAutoplayPolicy~~~function getAutoplayPolicy() {\n    [native code]\n}",
+      "registerProtocolHandler~~~function registerProtocolHandler() {\n    [native code]\n}",
+      "taintEnabled~~~function taintEnabled() {\n    [native code]\n}",
+      "permissions~~~function permissions() {\n    [native code]\n}",
+      "mimeTypes~~~get() {\n      return value;\n    }",
+      "plugins~~~get() {\n      return value;\n    }",
+      "pdfViewerEnabled~~~function pdfViewerEnabled() {\n    [native code]\n}",
+      "doNotTrack~~~function doNotTrack() {\n    [native code]\n}",
+      "maxTouchPoints~~~function maxTouchPoints() {\n    [native code]\n}",
+      "mediaCapabilities~~~function mediaCapabilities() {\n    [native code]\n}",
+      "oscpu~~~function oscpu() {\n    [native code]\n}",
+      "vendor~~~function vendor() {\n    [native code]\n}",
+      "vendorSub~~~function vendorSub() {\n    [native code]\n}",
+      "productSub~~~function productSub() {\n    [native code]\n}",
+      "cookieEnabled~~~function cookieEnabled() {\n    [native code]\n}",
+      "buildID~~~function buildID() {\n    [native code]\n}",
+      "mediaDevices~~~function mediaDevices() {\n    [native code]\n}",
+      "serviceWorker~~~function serviceWorker() {\n    [native code]\n}",
+      "credentials~~~function credentials() {\n    [native code]\n}",
+      "clipboard~~~function clipboard() {\n    [native code]\n}",
+      "mediaSession~~~function mediaSession() {\n    [native code]\n}",
+      "userActivation~~~function userActivation() {\n    [native code]\n}",
+      "wakeLock~~~function wakeLock() {\n    [native code]\n}",
+      "login~~~function login() {\n    [native code]\n}",
+      "globalPrivacyControl~~~function globalPrivacyControl() {\n    [native code]\n}",
+      "webdriver~~~function webdriver() {\n    [native code]\n}",
+      "hardwareConcurrency~~~function hardwareConcurrency() {\n    [native code]\n}",
+      "geolocation~~~function geolocation() {\n    [native code]\n}",
+      "appCodeName~~~function appCodeName() {\n    [native code]\n}",
+      "appName~~~function appName() {\n    [native code]\n}",
+      "appVersion~~~function appVersion() {\n    [native code]\n}",
+      "platform~~~function platform() {\n    [native code]\n}",
+      "userAgent~~~function userAgent() {\n    [native code]\n}",
+      "product~~~function product() {\n    [native code]\n}",
+      "language~~~function language() {\n    [native code]\n}",
+      "languages~~~function languages() {\n    [native code]\n}",
+      "locks~~~function locks() {\n    [native code]\n}",
+      "onLine~~~function onLine() {\n    [native code]\n}",
+      "storage~~~function storage() {\n    [native code]\n}",
+      "constructor~~~function Navigator() {\n    [native code]\n}",
+      "toString~~~",
+      "toLocaleString~~~",
+      "valueOf~~~",
+      "hasOwnProperty~~~",
+      "isPrototypeOf~~~",
+      "propertyIsEnumerable~~~",
+      "__defineGetter__~~~",
+      "__defineSetter__~~~",
+      "__lookupGetter__~~~",
+      "__lookupSetter__~~~",
+      "__proto__~~~",
+      "constructor~~~function Navigator() {\n    [native code]\n}"
+    ],
+    "navigatorProperties": [
+      "javaEnabled",
+      "getGamepads",
+      "requestMIDIAccess",
+      "mozGetUserMedia",
+      "sendBeacon",
+      "requestMediaKeySystemAccess",
+      "getAutoplayPolicy",
+      "registerProtocolHandler",
+      "taintEnabled",
+      "permissions",
+      "mimeTypes",
+      "plugins",
+      "pdfViewerEnabled",
+      "doNotTrack",
+      "maxTouchPoints",
+      "mediaCapabilities",
+      "oscpu",
+      "vendor",
+      "vendorSub",
+      "productSub",
+      "cookieEnabled",
+      "buildID",
+      "mediaDevices",
+      "serviceWorker",
+      "credentials",
+      "clipboard",
+      "mediaSession",
+      "userActivation",
+      "wakeLock",
+      "login",
+      "globalPrivacyControl",
+      "webdriver",
+      "hardwareConcurrency",
+      "geolocation",
+      "appCodeName",
+      "appName",
+      "appVersion",
+      "platform",
+      "userAgent",
+      "product",
+      "language",
+      "languages",
+      "locks",
+      "onLine",
+      "storage",
+      "constructor",
+      "toString",
+      "toLocaleString",
+      "valueOf",
+      "hasOwnProperty",
+      "isPrototypeOf",
+      "propertyIsEnumerable",
+      "__defineGetter__",
+      "__defineSetter__",
+      "__lookupGetter__",
+      "__lookupSetter__",
+      "__proto__",
+      "constructor"
+    ],
+    "etsl": 37,
+    "screenDesc": "function width() {\n    [native code]\n}",
+    "phantomJS": [
+      false,
+      false,
+      false
+    ],
+    "nightmareJS": false,
+    "selenium": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "webDriver": true,
+    "webDriverValue": true,
+    "errorsGenerated": [
+      "azeaze is not defined",
+      "https://bot.incolumitas.com/fpCollect.min.js",
+      482,
+      null,
+      null,
+      9,
+      null
+    ],
+    "resOverflow": {
+      "depth": 19987,
+      "errorMessage": "too much recursion",
+      "errorName": "InternalError",
+      "errorStacklength": 10368
+    },
+    "accelerometerUsed": false,
+    "screenMediaQuery": true,
+    "hasChrome": true,
+    "detailChrome": {
+      "webstore": "TypeError: can't access property \"constructor\", window.chrome[property] is undefined",
+      "runtime": "function Object() {\n    [native code]\n}",
+      "app": "function Object() {\n    [native code]\n}",
+      "csi": "function Function() {\n    [native code]\n}",
+      "loadTimes": "function Function() {\n    [native code]\n}",
+      "connect": "window.chrome.runtime.connect is not a function",
+      "sendMessage": "window.chrome.runtime.sendMessage is not a function"
+    },
+    "permissions": {
+      "state": "prompt",
+      "permission": "default"
+    },
+    "allPermissions": {
+      "accelerometer": {
+        "error": "TypeError: 'accelerometer' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "ambient-light-sensor": {
+        "error": "TypeError: 'ambient-light-sensor' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "background-fetch": {
+        "error": "TypeError: 'background-fetch' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "background-sync": {
+        "error": "TypeError: 'background-sync' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "bluetooth": {
+        "error": "TypeError: 'bluetooth' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "clipboard-write": {
+        "error": "TypeError: 'clipboard-write' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "device-info": {
+        "error": "TypeError: 'device-info' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "display-capture": {
+        "error": "TypeError: 'display-capture' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "gyroscope": {
+        "error": "TypeError: 'gyroscope' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "magnetometer": {
+        "error": "TypeError: 'magnetometer' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "nfc": {
+        "error": "TypeError: 'nfc' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "speaker-selection": {
+        "error": "TypeError: 'speaker-selection' (value of 'name' member of PermissionDescriptor) is not a valid value for enumeration PermissionName."
+      },
+      "camera": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "geolocation": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "microphone": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "midi": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "notifications": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "persistent-storage": {
+        "state": "prompt",
+        "permission": "default"
+      },
+      "push": {
+        "state": "prompt",
+        "permission": "default"
+      }
+    },
+    "iframeChrome": "object",
+    "debugTool": false,
+    "battery": false,
+    "deviceMemory": 0,
+    "tpCanvas": {
+      "0": 0,
+      "1": 0,
+      "2": 0,
+      "3": 0
+    },
+    "sequentum": false,
+    "audioCodecs": {
+      "ogg": "probably",
+      "mp3": "maybe",
+      "wav": "probably",
+      "m4a": "maybe",
+      "aac": "probably"
+    },
+    "videoCodecs": {
+      "ogg": "",
+      "h264": "probably",
+      "webm": "probably",
+      "mpeg4v": "",
+      "mpeg4a": "",
+      "theora": ""
+    },
+    "webSocketSupportTimeout": false
+  },
+  "detection-tests": {
+    "intoli": {
+      "userAgent": "OK",
+      "webDriver": "FAIL",
+      "webDriverAdvanced": "OK",
+      "pluginsLength": "OK",
+      "pluginArray": "OK",
+      "languages": "OK"
+    },
+    "fpscanner": {
+      "PHANTOM_UA": "OK",
+      "PHANTOM_PROPERTIES": "OK",
+      "PHANTOM_ETSL": "FAIL",
+      "PHANTOM_LANGUAGE": "OK",
+      "PHANTOM_WEBSOCKET": "OK",
+      "MQ_SCREEN": "OK",
+      "PHANTOM_OVERFLOW": "OK",
+      "PHANTOM_WINDOW_HEIGHT": "OK",
+      "HEADCHR_UA": "OK",
+      "WEBDRIVER": "FAIL",
+      "HEADCHR_CHROME_OBJ": "OK",
+      "HEADCHR_PERMISSIONS": "OK",
+      "HEADCHR_PLUGINS": "OK",
+      "HEADCHR_IFRAME": "OK",
+      "CHR_DEBUG_TOOLS": "OK",
+      "SELENIUM_DRIVER": "OK",
+      "CHR_BATTERY": "FAIL",
+      "CHR_MEMORY": "FAIL",
+      "TRANSPARENT_PIXEL": "OK",
+      "SEQUENTUM": "OK",
+      "VIDEO_CODECS": "OK"
+    }
+  },
+  "new-tests": {
+    "puppeteerEvaluationScript": "OK",
+    "webdriverPresent": "FAIL",
+    "connectionRTT": "UNKNOWN",
+    "refMatch": "FAIL",
+    "overrideTest": "FAIL",
+    "overflowTest": "FAIL",
+    "puppeteerExtraStealthUsed": "OK",
+    "inconsistentWebWorkerNavigatorPropery": "FAIL",
+    "inconsistentServiceWorkerNavigatorPropery": "FAIL"
+  }
+}

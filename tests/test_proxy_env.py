@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
@@ -13,6 +16,8 @@ if str(ROOT_DIR) not in sys.path:
 from config.engines import engines_config
 from config.settings import settings
 from utils.proxy.proxy_manager import get_external_ip, proxy_manager
+
+pytestmark = pytest.mark.engine
 
 
 @dataclass
@@ -34,6 +39,23 @@ def _filter_engine_configs(requested_names: list[str] | None) -> list[dict[str, 
     if missing:
         raise ValueError(f"Unknown engine names: {', '.join(missing)}")
     return filtered
+
+
+def _pick_engine_name() -> str:
+    preferred_prefixes = [
+        "patchright",
+        "playwright-chrome",
+        "playwright-firefox",
+    ]
+    names = [cfg.get("params", {}).get("name") for cfg in engines_config.engines]
+    names = [name for name in names if isinstance(name, str) and name]
+    for prefix in preferred_prefixes:
+        for name in names:
+            if name.startswith(prefix):
+                return name
+    if not names:
+        raise AssertionError("No configured engines were found")
+    return names[0]
 
 
 async def _stop_engine_safely(engine: Any) -> None:
@@ -192,6 +214,13 @@ def _parse_args() -> argparse.Namespace:
         help="Treat missing compatible proxy as SKIP instead of FAIL.",
     )
     return parser.parse_args()
+
+
+@pytest.mark.skipif(os.environ.get("RUN_ENGINE_TESTS") != "1", reason="Set RUN_ENGINE_TESTS=1 to run engine diagnostics")
+def test_proxy_env() -> None:
+    engine_name = _pick_engine_name()
+    exit_code = asyncio.run(_run(engine_names=[engine_name], allow_missing_proxy=True))
+    assert exit_code == 0
 
 
 def main() -> int:

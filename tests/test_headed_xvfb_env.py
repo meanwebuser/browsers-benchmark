@@ -7,11 +7,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from config.engines import engines_config
+
+pytestmark = pytest.mark.engine
 
 DATA_URL = "data:text/html,<html><body>engine smoke</body></html>"
 DISPLAY_ENV_KEYS = ("DISPLAY", "WAYLAND_DISPLAY", "MIR_SOCKET")
@@ -52,6 +56,23 @@ def _filter_engine_configs(requested_names: list[str] | None) -> list[dict[str, 
     if missing:
         raise ValueError(f"Unknown engine names: {', '.join(missing)}")
     return filtered
+
+
+def _pick_engine_name() -> str:
+    preferred_prefixes = [
+        "patchright",
+        "playwright-chrome",
+        "playwright-firefox",
+    ]
+    names = [cfg.get("params", {}).get("name") for cfg in engines_config.engines]
+    names = [name for name in names if isinstance(name, str) and name]
+    for prefix in preferred_prefixes:
+        for name in names:
+            if name.startswith(prefix):
+                return name
+    if not names:
+        raise AssertionError("No configured engines were found")
+    return names[0]
 
 
 async def _stop_engine_safely(engine: Any) -> None:
@@ -135,6 +156,13 @@ def _parse_args() -> argparse.Namespace:
         help="Optional list of engine names from config/engines.py; defaults to all configured engines.",
     )
     return parser.parse_args()
+
+
+@pytest.mark.skipif(os.environ.get("RUN_ENGINE_TESTS") != "1", reason="Set RUN_ENGINE_TESTS=1 to run engine diagnostics")
+def test_headed_xvfb_env() -> None:
+    engine_name = _pick_engine_name()
+    exit_code = asyncio.run(_run(engine_names=[engine_name]))
+    assert exit_code == 0
 
 
 def main() -> int:

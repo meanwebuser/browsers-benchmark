@@ -1,4 +1,5 @@
 import os
+import re
 from typing import List, Dict, Any, Set
 
 from pydantic import BaseModel, Field
@@ -23,10 +24,46 @@ ALLOWED_ENGINE_STEALTH_MODES = {"no_stealth", "use_stealth", "both"}
 ALLOWED_ENGINE_USER_AGENT_MODES = {"random", "native"}
 ALLOWED_ENGINES_TO_TEST_MODES = {"headless", "headed", "both"}
 
+_ENGINE_MODE_SUFFIX_RE = re.compile(r"_(headless|headed|with_stealth)$")
+
 
 def resolve_mode(value: str, allowed: Set[str], default: str) -> str:
     normalized = (value or "").strip().lower()
     return normalized if normalized in allowed else default
+
+
+def _strip_engine_mode_suffixes(name: str) -> str:
+    normalized = (name or "").strip()
+    while normalized and _ENGINE_MODE_SUFFIX_RE.search(normalized):
+        normalized = _ENGINE_MODE_SUFFIX_RE.sub("", normalized)
+    return normalized
+
+
+def _is_with_stealth(engine_cls: Any, params: Dict[str, Any]) -> bool:
+    explicit = params.get("with_stealth")
+    if explicit is not None:
+        return bool(explicit)
+
+    if engine_cls is TfPlaywrightStealthEngine:
+        return True
+
+    init_scripts = params.get("init_scripts", [])
+    return any(script in STEALTH_INIT_SCRIPTS for script in init_scripts)
+
+
+def _apply_engine_name_suffixes(engine_cls: Any, params: Dict[str, Any]) -> None:
+    base_name = _strip_engine_mode_suffixes(str(params.get("name") or "engine"))
+    suffixes: List[str] = []
+
+    if "headless" in params:
+        suffixes.append("headless" if bool(params.get("headless", True)) else "headed")
+
+    with_stealth = _is_with_stealth(engine_cls, params)
+    params["with_stealth"] = with_stealth
+    if with_stealth:
+        suffixes.append("with_stealth")
+
+    params["name"] = f"{base_name}_{'_'.join(suffixes)}" if suffixes else base_name
 
 
 class EngineConfig(BaseModel):
@@ -196,6 +233,10 @@ class EnginesSettings(BaseSettings):
         else:
             for engine in engine_variants:
                 engine.setdefault("params", {})
+
+        for engine in engine_variants:
+            params = engine.setdefault("params", {})
+            _apply_engine_name_suffixes(engine.get("class"), params)
 
         has_display = bool(
             os.environ.get("DISPLAY")

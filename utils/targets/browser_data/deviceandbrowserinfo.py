@@ -69,6 +69,7 @@ return (code.textContent || '').trim();
         return {
             "deviceandbrowserinfo_is_bot": None,
             "deviceandbrowserinfo_file": "",
+            "deviceandbrowserinfo_data": None,
         }
 
     try:
@@ -95,4 +96,5 @@ return (code.textContent || '').trim();
         "deviceandbrowserinfo_is_bot": bool(is_bot) if is_bot is not None else None,
         "deviceandbrowserinfo_file": file_path,
         "deviceandbrowserinfo_suspect_score": suspect_score,
+        "deviceandbrowserinfo_data": payload,
     }
