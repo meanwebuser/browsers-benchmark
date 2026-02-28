@@ -1,0 +1,60 @@
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+
+# environments
+*.env
+.env.*
+!.env.example
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# project
+documents/profiles/
+documents/binaries/
+documents/proxies.txt
+*.log
+results/*
+!results/example/
+
+# Seleniumbase files
+downloaded_files/
+*.sqlite*
+*.bak*
+documents/proxies copy.txt
+results/example/summary.md
+results/example/media/bypass_dashboard.png
+results/example/media/creepjs_scores.png
+results/example/media/recaptcha_scores.png
+node_modules/
+

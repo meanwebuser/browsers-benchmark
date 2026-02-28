@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+OUT_FILE="$REPO_ROOT/utils/js_scripts/stealth_improved.obf.js"
+
+before=""
+if [ -f "$OUT_FILE" ]; then
+  before="$(sha256sum "$OUT_FILE" | awk '{print $1}')"
+fi
+
+bash "$REPO_ROOT/scripts/obfuscate_improved_stealth.sh" >/dev/null
+
+after="$(sha256sum "$OUT_FILE" | awk '{print $1}')"
+
+if [ "$before" != "$after" ]; then
+  git add "$OUT_FILE"
+  echo "pre-push: re-obfuscated stealth file and staged changes."
+  echo "pre-push: commit utils/js_scripts/stealth_improved.obf.js and push again."
+  exit 1
+fi

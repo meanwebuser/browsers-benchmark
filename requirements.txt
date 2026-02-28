@@ -1,0 +1,26 @@
+# utils
+psutil==7.2.2
+numpy==2.2.6
+httpx[socks]==0.28.1
+matplotlib==3.10.8
+pandas==2.3.3
+seaborn==0.13.2
+
+# settings
+python-dotenv==1.2.1
+pydantic==2.12.5
+pydantic-settings==2.13.1
+
+# browsers
+seleniumbase==4.47.1
+playwright==1.58.0
+camoufox[geoip]==0.4.11
+tf-playwright-stealth==1.2.0
+patchright==1.58.0
+selenium==4.41.0
+nodriver==0.48.1
+zendriver==0.15.2
+browserforge==1.2.4
+
+# files
+aiofiles==25.1.0
