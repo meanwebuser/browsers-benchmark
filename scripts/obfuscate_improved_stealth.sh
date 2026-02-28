@@ -14,6 +14,7 @@ npx --yes javascript-obfuscator "$INPUT_FILE" \
   --control-flow-flattening-threshold 0.75 \
   --dead-code-injection true \
   --dead-code-injection-threshold 0.4 \
+  --seed 20260228 \
   --string-array true \
   --string-array-encoding base64 \
   --string-array-threshold 0.75 \
