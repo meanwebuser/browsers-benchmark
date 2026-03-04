@@ -40,6 +40,7 @@ Modern web applications use advanced bot detection like Cloudflare, DataDome, an
 ### Browser Engine Support
 - <a href="https://playwright.dev">**Playwright**</a> - Microsoft's automation framework (Chrome, Firefox, Safari)
 - <a href="https://camoufox.com">**Camoufox**</a> - Playwright-based
+- <a href="https://github.com/CloakHQ/cloakbrowser">**CloakBrowser**</a> - Stealth Chromium with source-level patches
 - <a href="https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python">**Patchright**</a> - Playwright-based
 - <a href="https://github.com/tinyfish-io/tf-playwright-stealth">**Playwright Stealth**</a> - Playwright-based
 - <a href="https://www.selenium.dev">**Selenium**</a> - Open-source browser automation framework (tested without proxies)
@@ -193,6 +194,12 @@ Tested only on Ubuntu. Mac have some trubles with camoufox and etc.
    # Linux  
    python -m camoufox fetch
    sudo apt install -y libgtk-3-0 libx11-xcb1 libasound2
+   ```
+
+   **CloakBrowser**
+   ```bash
+   pip install cloakbrowser
+   python -c "from cloakbrowser import ensure_binary; ensure_binary()"
    ```
 
    **Patchright**

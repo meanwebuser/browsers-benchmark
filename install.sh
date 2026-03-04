@@ -198,6 +198,16 @@ else
   log "Camoufox bundle already fetched, skipping"
 fi
 
+CLOAKBROWSER_SIG_FILE="$STATE_DIR/cloakbrowser.sig"
+CLOAKBROWSER_SIG="$(get_py_pkg_version cloakbrowser)"
+if [ ! -f "$CLOAKBROWSER_SIG_FILE" ] || [ "$CLOAKBROWSER_SIG" != "$(cat "$CLOAKBROWSER_SIG_FILE")" ]; then
+  log "Ensuring CloakBrowser binary is installed"
+  "$VENV_PY" -c "from cloakbrowser import ensure_binary; ensure_binary()"
+  printf '%s' "$CLOAKBROWSER_SIG" > "$CLOAKBROWSER_SIG_FILE"
+else
+  log "CloakBrowser binary already installed, skipping"
+fi
+
 PATCHRIGHT_SIG_FILE="$STATE_DIR/patchright.sig"
 PATCHRIGHT_SIG="$(get_py_pkg_version patchright)"
 if [ ! -f "$PATCHRIGHT_SIG_FILE" ] || [ "$PATCHRIGHT_SIG" != "$(cat "$PATCHRIGHT_SIG_FILE")" ]; then

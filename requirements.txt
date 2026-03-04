@@ -15,6 +15,7 @@ pydantic-settings==2.13.1
 seleniumbase==4.47.1
 playwright==1.58.0
 camoufox[geoip]==0.4.11
+cloakbrowser==0.3.4
 tf-playwright-stealth==1.2.0
 patchright==1.58.0
 selenium==4.41.0
