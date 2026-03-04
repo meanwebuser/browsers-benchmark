@@ -167,7 +167,31 @@ async function handleScreenshot(payload) {
   const targetPath = String(payload.path || "");
   if (!targetPath) throw new Error("Path is required for screenshot");
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-  const image = await hero.takeScreenshot();
+  // Hero alpha intermittently fails first capture with "Unable to capture screenshot".
+  // Retry with explicit formats/fullPage to stabilize behavior.
+  const strategies = [
+    { format: "png" },
+    { format: "jpeg", jpegQuality: 85 },
+    { format: "png", fullPage: true },
+  ];
+  let image = null;
+  let lastError = null;
+  for (let i = 0; i < strategies.length; i += 1) {
+    try {
+      image = await hero.takeScreenshot(strategies[i]);
+      if (image) break;
+    } catch (err) {
+      lastError = err;
+      if (i < strategies.length - 1) await hero.waitForMillis(250);
+    }
+  }
+  if (!image) {
+    throw new Error(
+      lastError && lastError.message
+        ? lastError.message
+        : "Unable to capture screenshot",
+    );
+  }
   fs.writeFileSync(targetPath, image);
   return { saved: true };
 }

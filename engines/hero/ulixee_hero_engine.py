@@ -73,7 +73,6 @@ class UlixeeHeroEngine(BrowserEngine):
                 "start",
                 {
                     "headless": self.headless,
-                    "userAgent": self.user_agent,
                     "viewport": {"width": self.viewport_width, "height": self.viewport_height},
                     "proxy": self.proxy,
                     "pageLoadTimeoutMs": settings.browser.page_load_timeout_s * 1000,

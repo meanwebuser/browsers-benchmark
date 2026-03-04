@@ -83,9 +83,10 @@ else
 fi
 
 VENV_PY="$REPO_ROOT/$VENV_DIR/bin/python"
+VENV_PY_REAL="$(cd "$(dirname "$VENV_PY")" && pwd)/$(basename "$VENV_PY")"
 
 PIP_TOOLING_SIG_FILE="$STATE_DIR/pip_tooling.sig"
-PIP_TOOLING_SIG="$("$VENV_PY" -c 'import platform; print(platform.python_version())')"
+PIP_TOOLING_SIG="$("$VENV_PY" -c 'import platform; print(platform.python_version())')|$VENV_PY_REAL"
 if [ ! -f "$PIP_TOOLING_SIG_FILE" ] || [ "$PIP_TOOLING_SIG" != "$(cat "$PIP_TOOLING_SIG_FILE")" ]; then
   log "Updating pip tooling"
   "$VENV_PY" -m pip install --upgrade pip setuptools wheel >/dev/null
@@ -99,7 +100,7 @@ if [ ! -f requirements.txt ]; then
 fi
 
 REQ_SIG_FILE="$STATE_DIR/requirements.sig"
-REQ_SIG="$("$VENV_PY" -c 'import platform; print(platform.python_version())')|$(sha256_of_file requirements.txt)"
+REQ_SIG="$("$VENV_PY" -c 'import platform; print(platform.python_version())')|$VENV_PY_REAL|$(sha256_of_file requirements.txt)"
 if [ ! -f "$REQ_SIG_FILE" ] || [ "$REQ_SIG" != "$(cat "$REQ_SIG_FILE")" ]; then
   log "Installing Python dependencies"
   "$VENV_PY" -m pip install -r requirements.txt

@@ -14,7 +14,8 @@ class ProxySettings(BaseModel):
     test_timeout: int = 10
     debug_verify_usage: bool = False
     lock_stale_s: int = 3600
-    max_retries: int = 3  # maximum number of proxy fallback attempts (0 = unlimited)
+    max_retries: int = 3  # max proxy errors before exclusion (error_count < max_retries), 0 = unlimited
+    fallback_max_retries: int = 3  # maximum number of fallback attempts per target (0 = unlimited)
 
     model_config = {"extra": "ignore"}
 
@@ -63,7 +64,8 @@ class Settings(BaseSettings):
     PROXY_TEST_TIMEOUT: int = 10
     PROXY_DEBUG_VERIFY_USAGE: bool = False
     PROXY_LOCK_STALE_S: int = 3600
-    PROXY_MAX_RETRIES: int = 3  # 0 = unlimited proxy fallback retries
+    PROXY_MAX_RETRIES: int = 3  # max proxy errors before exclusion (error_count < PROXY_MAX_RETRIES), 0 = unlimited
+    PROXY_FALLBACK_MAX_RETRIES: int = 3  # 0 = unlimited fallback retries per target
 
     # browser
     ACTION_TIMEOUT_S: int = 30  # maximum time to wait for actions like search of elements, screenshots, clicks, etc.
@@ -73,9 +75,13 @@ class Settings(BaseSettings):
     BROWSER_TRY_HEADED_WITHOUT_DISPLAY: bool = False
     ENGINE_STEALTH_MODE: str = "both"  # one of 'no_stealth', 'use_stealth', 'both'
     ENGINE_USER_AGENT_MODE: str = "random"  # one of 'random', 'native'
+    CAMOUFOX_UNLOCK_SHADOW_DOM: bool = True
     NUM_WORKERS_MIN: int = 1
     NUM_WORKERS_MAX: int = 10
     BENCHMARK_REPEAT_COUNT: int = 1
+    ENGINE_MAX_ATTEMPTS: int = 30  # 0 = unlimited total fallback attempts per engine run
+    ENGINE_PROXY_FALLBACK_MAX_ATTEMPTS: int | None = None  # legacy alias for ENGINE_MAX_ATTEMPTS
+    ENGINE_RUN_TIMEOUT_S: int = 0  # 0 = unlimited total runtime per engine run
 
     # paths
     DOCUMENTS_PATH: str = "documents"
@@ -91,6 +97,7 @@ class Settings(BaseSettings):
     @property
     def proxy(self) -> ProxySettings:
         """Get proxy configuration"""
+        fallback_max_retries = self.PROXY_FALLBACK_MAX_RETRIES
         return ProxySettings(
             enabled=self.PROXY_ENABLED,
             file_path=self.PROXY_FILE_PATH,
@@ -99,7 +106,8 @@ class Settings(BaseSettings):
             test_timeout=self.PROXY_TEST_TIMEOUT,
             debug_verify_usage=self.PROXY_DEBUG_VERIFY_USAGE,
             lock_stale_s=self.PROXY_LOCK_STALE_S,
-            max_retries=self.PROXY_MAX_RETRIES
+            max_retries=self.PROXY_MAX_RETRIES,
+            fallback_max_retries=fallback_max_retries,
         )
 
     @property

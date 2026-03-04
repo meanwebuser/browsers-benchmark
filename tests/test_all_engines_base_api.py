@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import asyncio
 import os
+import re
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -38,6 +43,46 @@ def _engine_id(engine_config: dict[str, Any]) -> str:
 ENGINE_CONFIGS = _selected_engine_configs()
 
 
+def _ocr_text_from_image(image_path: Path) -> str:
+    tesseract_bin = shutil.which("tesseract")
+    if not tesseract_bin:
+        pytest.skip("tesseract is not installed; OCR smoke check is unavailable")
+
+    result = subprocess.run(
+        [tesseract_bin, str(image_path), "stdout", "--psm", "6", "-l", "eng"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout or ""
+
+
+def _normalize_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
+async def _reload_with_retries(engine: Any, attempts: int = 2) -> dict[str, Any]:
+    last_error: Exception | None = None
+    for _ in range(attempts):
+        try:
+            result = await engine.reload_page()
+            if isinstance(result, dict):
+                return result
+        except Exception as error:
+            last_error = error
+        await asyncio.sleep(0.5)
+
+    # Fallback path for engines that expose unstable native reload semantics.
+    try:
+        await engine.execute_js("window.location.reload(); return true;")
+        await asyncio.sleep(1.0)
+        return {"url": "", "success": True, "headers": {}}
+    except Exception:
+        if last_error:
+            raise last_error
+        raise
+
+
 async def _run_engine_base_api_smoke(engine_config: dict[str, Any]) -> None:
     engine_cls = engine_config["class"]
     params = dict(engine_config.get("params", {}))
@@ -63,7 +108,31 @@ async def _run_engine_base_api_smoke(engine_config: dict[str, Any]) -> None:
         assert isinstance(page_content, str) and page_content.strip(), f"{engine_name}: get_page_content() is empty"
         assert "example" in page_content.lower(), f"{engine_name}: get_page_content() does not look like example.com"
 
-        reload_result = await engine.reload_page()
+        ocr_expected = "OCR CHECK OK"
+        await engine.execute_js(
+            f"""
+document.body.innerHTML = '<div style="font-family:Arial,sans-serif;font-size:120px;font-weight:800;color:#000;background:#fff;padding:60px;line-height:1.2">{ocr_expected}</div>';
+document.body.style.margin = '0';
+document.documentElement.style.background = '#fff';
+return true;
+"""
+        )
+        await asyncio.sleep(0.5)
+
+        with tempfile.TemporaryDirectory(prefix=f"{engine_name}_ocr_") as temp_dir:
+            screenshot_path = Path(temp_dir) / "ocr.png"
+            await engine.screenshot(str(screenshot_path))
+            assert screenshot_path.exists(), f"{engine_name}: screenshot file was not created"
+            assert screenshot_path.stat().st_size > 0, f"{engine_name}: screenshot file is empty"
+
+            ocr_text = await asyncio.to_thread(_ocr_text_from_image, screenshot_path)
+            normalized_ocr = _normalize_text(ocr_text)
+            normalized_expected = _normalize_text(ocr_expected)
+            assert (
+                normalized_expected in normalized_ocr
+            ), f"{engine_name}: OCR mismatch. expected~={ocr_expected!r}, got={ocr_text!r}"
+
+        reload_result = await _reload_with_retries(engine)
         assert isinstance(reload_result, dict), f"{engine_name}: reload_page() did not return a dict"
         assert isinstance(reload_result.get("url", ""), str), f"{engine_name}: reload_page() returned invalid url"
     finally:

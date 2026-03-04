@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from typing import Dict, Optional, Literal, List
 
@@ -9,6 +10,8 @@ from config.settings import settings
 from engines.playwright_base import PlaywrightBase
 from utils.js_script import load_js_script
 from utils.process import find_new_child_processes
+
+logger = logging.getLogger(__name__)
 
 
 class CamoufoxEngine(PlaywrightBase):
@@ -76,7 +79,11 @@ class CamoufoxEngine(PlaywrightBase):
             context_options["user_agent"] = self.user_agent
 
         self.context = await self.browser.new_context(**context_options)
-        await self.context.add_init_script(await load_js_script('unlockShadowDom.js'))
+        if settings.CAMOUFOX_UNLOCK_SHADOW_DOM:
+            await self.context.add_init_script(await load_js_script('unlockShadowDom.js'))
+            logger.info("Camoufox init script mode: unlock_shadow_dom=on")
+        else:
+            logger.info("Camoufox init script mode: unlock_shadow_dom=off")
         for script_file in self.init_scripts:
             await self.context.add_init_script(
                 await load_js_script(

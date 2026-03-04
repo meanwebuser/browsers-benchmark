@@ -19,7 +19,7 @@ from engines.selenium.selenium_engine import SeleniumEngine
 from engines.seleniumbase_uc import SeleniumBaseUCEngine
 from utils.user_agent import generate_user_agent
 
-STEALTH_INIT_SCRIPTS = ["stealth_improved.js"]
+STEALTH_INIT_SCRIPTS = ["stealth_improved.obf.js"]
 ALLOWED_ENGINE_STEALTH_MODES = {"no_stealth", "use_stealth", "both"}
 ALLOWED_ENGINE_USER_AGENT_MODES = {"random", "native"}
 ALLOWED_ENGINES_TO_TEST_MODES = {"headless", "headed", "both"}
@@ -188,38 +188,76 @@ class EnginesSettings(BaseSettings):
             # }
         ]
 
-        # Build a single engine list and let ENV override behavior globally.
-        # This avoids matrix-style duplication by stealth/headless modes.
-        engine_variants: List[Dict[str, Any]] = [
-            {**engine, "params": dict(engine.get("params", {}))}
-            for engine in base_engines
-        ]
+        engine_variants: List[Dict[str, Any]] = []
 
-        if stealth_mode == "no_stealth":
-            engine_variants = [
-                engine
-                for engine in engine_variants
-                if engine.get("class") is not TfPlaywrightStealthEngine
-            ]
+        for base_engine in base_engines:
+            engine_cls = base_engine.get("class")
+            base_params = dict(base_engine.get("params", {}))
+            has_headless_flag = "headless" in base_params
 
-        for engine in engine_variants:
-            params = engine.setdefault("params", {})
-
-            if stealth_mode == "use_stealth":
-                init_scripts = list(params.get("init_scripts", []))
-                for script_name in STEALTH_INIT_SCRIPTS:
-                    if script_name not in init_scripts:
-                        init_scripts.append(script_name)
-                params["init_scripts"] = init_scripts
-            elif stealth_mode == "no_stealth":
-                init_scripts = [x for x in params.get("init_scripts", []) if x not in STEALTH_INIT_SCRIPTS]
-                if init_scripts:
-                    params["init_scripts"] = init_scripts
+            if has_headless_flag:
+                if ENGINES_TO_TEST_MODE == "headless":
+                    headless_modes = [True]
+                elif ENGINES_TO_TEST_MODE == "headed":
+                    headless_modes = [False]
                 else:
-                    params.pop("init_scripts", None)
+                    headless_modes = [True, False]
+            else:
+                headless_modes = [None]
 
-            if ENGINES_TO_TEST_MODE in {"headless", "headed"} and "headless" in params:
-                params["headless"] = ENGINES_TO_TEST_MODE == "headless"
+            for headless_value in headless_modes:
+                params = dict(base_params)
+                if headless_value is not None:
+                    params["headless"] = headless_value
+
+                # TfPlaywrightStealthEngine is inherently stealth; it only has stealth variants.
+                if engine_cls is TfPlaywrightStealthEngine:
+                    if stealth_mode == "no_stealth":
+                        continue
+                    stealth_variants = [True]
+                else:
+                    if stealth_mode == "use_stealth":
+                        stealth_variants = [True]
+                    elif stealth_mode == "no_stealth":
+                        stealth_variants = [False]
+                    else:
+                        stealth_variants = [False, True]
+
+                for with_stealth in stealth_variants:
+                    variant_params = dict(params)
+                    init_scripts = [
+                        script
+                        for script in variant_params.get("init_scripts", [])
+                        if script not in STEALTH_INIT_SCRIPTS
+                    ]
+
+                    if with_stealth:
+                        for script_name in STEALTH_INIT_SCRIPTS:
+                            if script_name not in init_scripts:
+                                init_scripts.append(script_name)
+
+                    if init_scripts:
+                        variant_params["init_scripts"] = init_scripts
+                    else:
+                        variant_params.pop("init_scripts", None)
+
+                    variant_params["with_stealth"] = with_stealth
+                    engine_variants.append({**base_engine, "params": variant_params})
+
+        # Deduplicate variants that can overlap across expansion rules.
+        unique_variants: List[Dict[str, Any]] = []
+        seen_signatures: Set[str] = set()
+        for engine in engine_variants:
+            params = dict(engine.get("params", {}))
+            init_scripts = params.get("init_scripts")
+            if isinstance(init_scripts, list):
+                params["init_scripts"] = sorted(init_scripts)
+            signature = repr((engine.get("class"), sorted(params.items())))
+            if signature in seen_signatures:
+                continue
+            seen_signatures.add(signature)
+            unique_variants.append(engine)
+        engine_variants = unique_variants
 
         if user_agent_mode == "random":
             for engine in engine_variants:

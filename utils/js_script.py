@@ -26,7 +26,11 @@ async def load_js_script(
 
     normalized_file = file_name.replace('/', os.sep)
 
-    if normalized_file in {"stealth_improved.js", "all_in_one_steath.js"} and user_agent:
+    if normalized_file in {
+        "stealth_improved.js",
+        "stealth_improved.obf.js",
+        "all_in_one_steath.js",
+    } and user_agent:
         platform_map = {
             "chrome": "chrome",
             "chromium": "chrome",

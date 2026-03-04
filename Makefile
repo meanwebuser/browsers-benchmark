@@ -4,7 +4,7 @@ PYTHON ?= ./venv/bin/python
 PID_FILE ?= .install_state/benchmark.pid
 LOG_FILE ?= .install_state/benchmark.log
 
-.PHONY: install test test-fast start status stop
+.PHONY: install test test-fast start status stop score
 
 install:
 	./install.sh
@@ -53,3 +53,6 @@ stop:
 		fi; \
 		rm -f "$(PID_FILE)"; \
 	}
+
+score:
+	$(PYTHON) build_overall_score.py $1

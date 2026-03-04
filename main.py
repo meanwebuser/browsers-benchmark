@@ -502,22 +502,32 @@ def run_engine_worker(task):
                     f"Engine {engine_name} does not support any proxy protocols, running without proxy"
                 )
 
-        results = loop.run_until_complete(
-            run_benchmark_for_engine(
-                engine_cls=engine_cls,
-                engine_params=engine_params,
-                bypass_targets=bypass_targets,
-                browser_data_targets=browser_data_targets,
-                screenshots_path=screenshots_path,
-                proxy=proxy,
-                direct_external_ip=direct_external_ip,
-            )
+        run_coro = run_benchmark_for_engine(
+            engine_cls=engine_cls,
+            engine_params=engine_params,
+            bypass_targets=bypass_targets,
+            browser_data_targets=browser_data_targets,
+            screenshots_path=screenshots_path,
+            proxy=proxy,
+            direct_external_ip=direct_external_ip,
         )
+        engine_timeout_s = max(0, int(settings.ENGINE_RUN_TIMEOUT_S))
+        if engine_timeout_s > 0:
+            results = loop.run_until_complete(asyncio.wait_for(run_coro, timeout=engine_timeout_s))
+        else:
+            results = loop.run_until_complete(run_coro)
         if results:
             # Сохраняем результаты
             results_path = save_results(results, result_path)
             logger.info(f"Results saved to {results_path}")
         return results
+    except asyncio.TimeoutError:
+        logger.error(
+            "Engine run timeout exceeded for %s: ENGINE_RUN_TIMEOUT_S=%s",
+            engine_name,
+            settings.ENGINE_RUN_TIMEOUT_S,
+        )
+        return None
     except Exception as e:
         logger.error(f"Unhandled exception in worker: {e}")
         return None
@@ -554,6 +564,7 @@ def run_parallel_benchmarks() -> None:
     if not settings.proxy.enabled:
         logger.warning("PROXIES ARE DISABLED! Results may be inaccurate due to IP reputation.")
     else:
+        proxy_manager.reset()
         direct_external_ip = get_external_ip(timeout=settings.proxy.test_timeout)
         if direct_external_ip:
             logger.info(f"Resolved direct external IP once in main: {direct_external_ip}")

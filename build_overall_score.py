@@ -7,6 +7,8 @@ import statistics
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 
 def _safe_float(value: Any) -> float | None:
     if value is None:
@@ -79,6 +81,17 @@ def _resolve_results_file(args: argparse.Namespace) -> Path:
         return Path(args.results_file).expanduser().resolve()
     if args.results_dir:
         return Path(args.results_dir).expanduser().resolve() / "benchmark_results.json"
+    if args.results_path:
+        path = Path(args.results_path).expanduser().resolve()
+        if path.is_dir():
+            results_file = path / "benchmark_results.json"
+            if not results_file.exists() and (path / "progress_report.txt").exists():
+                raise FileNotFoundError(
+                    f"Results JSON not found: {results_file} "
+                    f"(run is likely still in progress; progress_report.txt exists)"
+                )
+            return results_file
+        return path
     return _find_latest_valid_results_file(Path(args.results_root).expanduser().resolve())
 
 
@@ -104,6 +117,26 @@ def _collect_site_names(results: list[dict[str, Any]]) -> set[str]:
             if isinstance(target, str) and target:
                 names.add(target)
     return names
+
+
+def _collect_bypass_target_names(results: list[dict[str, Any]]) -> list[str]:
+    names: set[str] = set()
+    for engine_result in results:
+        for row in engine_result.get("bypass_targets_results", []) or []:
+            target = row.get("target")
+            if isinstance(target, str) and target:
+                names.add(target)
+    return sorted(names)
+
+
+def _collect_browser_target_names(results: list[dict[str, Any]]) -> list[str]:
+    names: set[str] = set()
+    for engine_result in results:
+        for row in engine_result.get("browser_data_targets_results", []) or []:
+            target = row.get("target")
+            if isinstance(target, str) and target:
+                names.add(target)
+    return sorted(names)
 
 
 def _filter_rows_by_sites(rows: list[dict[str, Any]], sites: set[str] | None) -> list[dict[str, Any]]:
@@ -146,6 +179,60 @@ def _extract_bot_signals(browser_rows: list[dict[str, Any]]) -> list[float]:
                 signals.append(1.0 - suscpect)
 
     return signals
+
+
+def _extract_run_extra_columns(
+        engine_result: dict[str, Any],
+        bypass_targets: list[str],
+        browser_targets: list[str],
+        sites: set[str] | None,
+) -> dict[str, Any]:
+    extra: dict[str, Any] = {}
+    bypass_rows_all = engine_result.get("bypass_targets_results") or []
+    browser_rows_all = engine_result.get("browser_data_targets_results") or []
+    bypass_rows = _filter_rows_by_sites(bypass_rows_all, sites)
+    browser_rows = _filter_rows_by_sites(browser_rows_all, sites)
+
+    bypass_by_target: dict[str, list[bool]] = {}
+    for row in bypass_rows:
+        target = row.get("target")
+        if not isinstance(target, str) or not target:
+            continue
+        ok = bool(row.get("bypass")) and not row.get("error")
+        bypass_by_target.setdefault(target, []).append(ok)
+
+    for target in bypass_targets:
+        values = bypass_by_target.get(target, [])
+        prob = _mean([1.0 if v else 0.0 for v in values]) if values else None
+        extra[f"bypass_prob__{target}"] = (prob * 100.0) if prob is not None else None
+
+    signals_by_target: dict[str, list[float]] = {}
+    ips_by_target: dict[str, set[str]] = {}
+    all_ips: set[str] = set()
+    for row in browser_rows:
+        target = row.get("target")
+        if not isinstance(target, str) or not target:
+            continue
+
+        target_signals = _extract_bot_signals([row])
+        if target_signals:
+            signals_by_target.setdefault(target, []).extend(target_signals)
+
+        ip = row.get("ip")
+        if isinstance(ip, str) and ip.strip():
+            all_ips.add(ip.strip())
+            ips_by_target.setdefault(target, set()).add(ip.strip())
+
+    for target in browser_targets:
+        human = _mean(signals_by_target.get(target, []))
+        extra[f"human_score__{target}"] = (human * 100.0) if human is not None else None
+        target_ips = sorted(ips_by_target.get(target, set()))
+        extra[f"ip__{target}"] = ", ".join(target_ips) if target_ips else None
+
+    extra["ip_list"] = ", ".join(sorted(all_ips)) if all_ips else None
+    extra["engine_error"] = engine_result.get("error")
+    extra["engine_timestamp"] = engine_result.get("timestamp")
+    return extra
 
 
 def _estimate_instance_capacity_by_ram(
@@ -401,21 +488,15 @@ def _aggregate_scored_by_engine(rows: list[dict[str, Any]]) -> list[dict[str, An
         key = _base_engine_name(str(row.get("engine") or "unknown"))
         groups.setdefault(key, []).append(row)
 
-    numeric_fields = [
-        "privacy_score",
-        "overall_score",
-        "performance_score",
-        "windows_per_hour",
-        "full_test_duration_s",
-        "startup_time_ms",
-        "bypass_rate",
-        "bot_human_score",
-        "avg_memory_mb",
-        "avg_cpu_percent",
-        "estimated_instances",
-        "estimated_instances_ram",
-        "estimated_instances_cpu",
-    ]
+    numeric_fields = sorted(
+        {
+            key
+            for row in rows
+            for key, value in row.items()
+            if key not in {"engine", "bottleneck", "run_count"}
+            and _safe_float(value) is not None
+        }
+    )
 
     aggregated: list[dict[str, Any]] = []
     for engine_name, items in groups.items():
@@ -431,9 +512,73 @@ def _aggregate_scored_by_engine(rows: list[dict[str, Any]]) -> list[dict[str, An
 
         bottlenecks = [str(item.get("bottleneck")) for item in items if item.get("bottleneck")]
         merged["bottleneck"] = statistics.multimode(bottlenecks)[0] if bottlenecks else None
+        merged["run_engines"] = ", ".join(sorted(str(item.get("engine")) for item in items))
+        merged["ip_list"] = ", ".join(
+            sorted(
+                {
+                    ip.strip()
+                    for item in items
+                    for ip in str(item.get("ip_list") or "").split(",")
+                    if ip.strip()
+                }
+            )
+        ) or None
         aggregated.append(merged)
 
     return aggregated
+
+
+def _ordered_export_columns(rows: list[dict[str, Any]], include_runs: bool) -> list[str]:
+    base = [
+        "engine",
+        *(["run_count"] if include_runs else []),
+        "overall_score",
+        "privacy_score",
+        "performance_score",
+        "windows_per_hour",
+        "estimated_instances",
+        "bottleneck",
+        "full_test_duration_s",
+        "startup_time_ms",
+        "bypass_rate",
+        "bot_human_score",
+        "avg_memory_mb",
+        "avg_cpu_percent",
+        "ip_list",
+        "engine_error",
+        "engine_timestamp",
+        "run_engines",
+    ]
+    existing = {key for row in rows for key in row.keys()}
+    ordered = [col for col in base if col in existing]
+    extra = sorted(existing - set(ordered))
+    return ordered + extra
+
+
+def _export_excel_like(
+        per_run_rows: list[dict[str, Any]],
+        aggregated_rows: list[dict[str, Any]],
+        output_path: Path,
+) -> None:
+    per_run_df = pd.DataFrame(per_run_rows)
+    per_run_df = per_run_df.reindex(columns=_ordered_export_columns(per_run_rows, include_runs=False))
+
+    aggregated_df = pd.DataFrame(aggregated_rows)
+    aggregated_df = aggregated_df.reindex(columns=_ordered_export_columns(aggregated_rows, include_runs=True))
+
+    try:
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            per_run_df.to_excel(writer, index=False, sheet_name="Per-run scores")
+            aggregated_df.to_excel(writer, index=False, sheet_name="Averaged by engine")
+        print(f"Saved Excel: {output_path}")
+        return
+    except Exception:
+        base = output_path.with_suffix("")
+        per_run_csv = Path(f"{base}_per_run.csv")
+        avg_csv = Path(f"{base}_averaged.csv")
+        per_run_df.to_csv(per_run_csv, index=False)
+        aggregated_df.to_csv(avg_csv, index=False)
+        print(f"Excel export unavailable (install openpyxl). Saved CSVs: {per_run_csv}, {avg_csv}")
 
 
 def _print_table(
@@ -529,6 +674,11 @@ def main() -> None:
             "By default, uses the latest valid run under results/."
         )
     )
+    parser.add_argument(
+        "results_path",
+        nargs="?",
+        help="Optional run directory or path to benchmark_results.json",
+    )
     parser.add_argument("--results-file", help="Path to benchmark_results.json")
     parser.add_argument("--results-dir", help="Run directory containing benchmark_results.json")
     parser.add_argument(
@@ -570,6 +720,10 @@ def main() -> None:
         "--output-file",
         help="Optional path to save computed scores as JSON",
     )
+    parser.add_argument(
+        "--excel-file",
+        help="Optional path to save Excel report (.xlsx). Falls back to CSV if openpyxl is unavailable.",
+    )
     args = parser.parse_args()
 
     results_file = _resolve_results_file(args)
@@ -595,8 +749,11 @@ def main() -> None:
     cpu_count = args.cpu_count if args.cpu_count and args.cpu_count > 0 else _detect_cpu_count()
     ram_gb = args.ram_gb if args.ram_gb and args.ram_gb > 0 else _detect_ram_gb()
 
-    scored = [
-        _compute_engine_scores(
+    bypass_targets = _collect_bypass_target_names(results)
+    browser_targets = _collect_browser_target_names(results)
+    scored: list[dict[str, Any]] = []
+    for row in results:
+        score_row = _compute_engine_scores(
             engine_result=row,
             sites=selected_sites,
             cpu_count=cpu_count,
@@ -604,8 +761,15 @@ def main() -> None:
             bypass_weight=max(0.0, args.bypass_weight),
             bot_weight=max(0.0, args.bot_weight),
         )
-        for row in results
-    ]
+        score_row.update(
+            _extract_run_extra_columns(
+                engine_result=row,
+                bypass_targets=bypass_targets,
+                browser_targets=browser_targets,
+                sites=selected_sites,
+            )
+        )
+        scored.append(score_row)
 
     _apply_derived_scores(scored)
     _sort_scored(scored)
@@ -626,6 +790,13 @@ def main() -> None:
         title="Averaged by engine (mean across runs with same params):",
         include_run_count=True,
     )
+
+    excel_path = (
+        Path(args.excel_file).expanduser().resolve()
+        if args.excel_file
+        else results_file.parent / "overall_scores.xlsx"
+    )
+    _export_excel_like(scored, aggregated_scored, excel_path)
 
     if args.output_file:
         output_path = Path(args.output_file).expanduser().resolve()

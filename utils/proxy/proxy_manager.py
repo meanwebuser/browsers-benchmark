@@ -160,6 +160,7 @@ class ProxyManager:
         self.test_url = settings.proxy.test_url
         self.test_timeout = settings.proxy.test_timeout
         self.lock_stale_s = settings.proxy.lock_stale_s
+        self.max_proxy_errors = max(0, int(settings.proxy.max_retries))
         # Keep for backward compatibility in logs/debug, but do not rely on this field
         # for lock ownership because workers can be created via fork.
         self.process_id = os.getpid()
@@ -452,10 +453,10 @@ class ProxyManager:
                     host,
                     MAX(selected_at) AS host_last_selected
                 FROM proxies
-                WHERE is_failed = 0
+                WHERE (? = 0 OR error_count < ?)
                 GROUP BY host
             ) hp ON hp.host = p.host
-            WHERE p.is_failed = 0
+            WHERE (? = 0 OR p.error_count < ?)
               AND p.locked_by IS NULL
               AND NOT EXISTS (
                   SELECT 1
@@ -464,7 +465,12 @@ class ProxyManager:
                     AND locked.locked_by IS NOT NULL
               )
         """
-        params: List[Any] = []
+        params: List[Any] = [
+            self.max_proxy_errors,
+            self.max_proxy_errors,
+            self.max_proxy_errors,
+            self.max_proxy_errors,
+        ]
 
         if supported_protocols:
             placeholders = ",".join(["?"] * len(supported_protocols))
@@ -491,7 +497,7 @@ class ProxyManager:
             query = """
                 SELECT COUNT(DISTINCT p.host) AS cnt
                 FROM proxies p
-                WHERE p.is_failed = 0
+                WHERE (? = 0 OR p.error_count < ?)
                   AND p.locked_by IS NULL
                   AND NOT EXISTS (
                       SELECT 1
@@ -500,7 +506,7 @@ class ProxyManager:
                         AND locked.locked_by IS NOT NULL
                   )
             """
-            params: List[str] = []
+            params: List[Any] = [self.max_proxy_errors, self.max_proxy_errors]
             if supported_protocols:
                 placeholders = ",".join(["?"] * len(supported_protocols))
                 query += f" AND p.protocol IN ({placeholders})"
@@ -728,9 +734,11 @@ class ProxyManager:
                 """
                 SELECT protocol, COUNT(*) AS cnt
                 FROM proxies
-                WHERE is_failed = 0
+                WHERE (? = 0 OR error_count < ?)
                 GROUP BY protocol
                 """
+                ,
+                (self.max_proxy_errors, self.max_proxy_errors),
             ).fetchall()
             protocol_availability = {row["protocol"]: int(row["cnt"]) for row in rows}
 
@@ -824,13 +832,16 @@ class ProxyManager:
                 """
                 UPDATE proxies
                 SET is_failed = 0,
+                    error_count = 0,
                     locked_at = NULL,
                     locked_by = NULL,
+                    last_error_at = NULL,
+                    last_error = NULL,
                     updated_at = ?
                 """,
                 (self._now_iso(),),
             )
-        logger.info("Proxy state reset: locks cleared and failed flags dropped")
+        logger.info("Proxy state reset: locks cleared and proxy error counters dropped")
 
     def get_stats(self) -> Dict[str, int]:
         with self._connect() as conn:
@@ -889,14 +900,35 @@ async def handle_proxy_fallback(
         return None, str(original_error)
 
     supported_protocols = getattr(engine, "supported_proxy_protocols", ["http", "https"])
-    configured_proxy_retries = int(settings.proxy.max_retries)
+    configured_proxy_retries = int(settings.proxy.fallback_max_retries)
     unlimited_proxy_retries = configured_proxy_retries == 0
     max_proxy_retries = max(1, configured_proxy_retries) if not unlimited_proxy_retries else None
+    configured_engine_fallback_budget = int(
+        settings.ENGINE_MAX_ATTEMPTS
+        if settings.ENGINE_PROXY_FALLBACK_MAX_ATTEMPTS is None
+        else settings.ENGINE_PROXY_FALLBACK_MAX_ATTEMPTS
+    )
+    unlimited_engine_fallback_budget = configured_engine_fallback_budget == 0
+    engine_total_attempts = int(getattr(engine, "_proxy_fallback_attempts_total", 0))
     attempt_errors: List[str] = []
     attempt = 0
     while unlimited_proxy_retries or (max_proxy_retries is not None and attempt < max_proxy_retries):
+        if not unlimited_engine_fallback_budget and engine_total_attempts >= configured_engine_fallback_budget:
+            logger.error(
+                f"Reached per-engine fallback limit for {target_name}: "
+                f"{engine_total_attempts}/{configured_engine_fallback_budget}"
+            )
+            break
+
         attempt += 1
+        engine_total_attempts += 1
+        setattr(engine, "_proxy_fallback_attempts_total", engine_total_attempts)
         attempt_label = f"{attempt}/unlimited" if unlimited_proxy_retries else f"{attempt}/{max_proxy_retries}"
+        engine_attempt_label = (
+            f"{engine_total_attempts}/unlimited"
+            if unlimited_engine_fallback_budget
+            else f"{engine_total_attempts}/{configured_engine_fallback_budget}"
+        )
         fallback_proxy = await proxy_manager_instance.aget_fallback_proxy_by_protocol(
             supported_protocols,
             failed_proxy=None,
@@ -907,21 +939,23 @@ async def handle_proxy_fallback(
             if unlimited_proxy_retries:
                 logger.warning(
                     f"No compatible fallback proxy available for {target_name} "
-                    f"(supports: {supported_protocols}) on attempt {attempt_label}; retrying in 2s"
+                    f"(supports: {supported_protocols}) on attempt {attempt_label} "
+                    f"(engine total {engine_attempt_label}); retrying in 2s"
                 )
                 await asyncio.sleep(2)
                 continue
 
             logger.error(
                 f"No compatible fallback proxy available for {target_name} "
-                f"(supports: {supported_protocols}) on attempt {attempt_label}"
+                f"(supports: {supported_protocols}) on attempt {attempt_label} "
+                f"(engine total {engine_attempt_label})"
             )
             break
 
         logger.info(
             f"Retrying {target_name} with fallback {fallback_proxy['protocol']} "
             f"proxy {fallback_proxy.get('host')}:{fallback_proxy.get('port')} "
-            f"(attempt {attempt_label})"
+            f"(attempt {attempt_label}, engine total {engine_attempt_label})"
         )
 
         try:
@@ -947,7 +981,7 @@ async def handle_proxy_fallback(
             )
             logger.error(
                 f"Fallback proxy failed for {target_name} "
-                f"(attempt {attempt_label}): {fallback_error}"
+                f"(attempt {attempt_label}, engine total {engine_attempt_label}): {fallback_error}"
             )
 
     suffix = f", Fallbacks: {' | '.join(attempt_errors)}" if attempt_errors else ""

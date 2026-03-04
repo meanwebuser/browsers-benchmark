@@ -178,18 +178,20 @@ def render_stealth_script(
     agent: str,
     *,
     is_mobile: bool | None = None,
-    stealth_script: str = "stealth_improved",
+    stealth_script: str = "stealth_improved.obf.js",
     platform: str = "chrome",
 ) -> str:
-    configured_name = str(stealth_script or "stealth_improved").strip()
+    configured_name = str(stealth_script or "stealth_improved.obf.js").strip()
     configured_file = f"{configured_name}.js" if not configured_name.endswith(".js") else configured_name
 
     js_base_dir = Path(__file__).resolve().parent.parent / "js_scripts"
     candidates = [
         js_base_dir / configured_file,
+        js_base_dir / "stealth_improved.obf.js",
         js_base_dir / "stealth_improved.js",
         js_base_dir / "all_in_one_steath.js",
         Path("stealth") / configured_file,
+        Path("stealth") / "stealth_improved.obf.js",
         Path("stealth") / "stealth_improved.js",
         Path("stealth") / "all_in_one_steath.js",
     ]
@@ -215,7 +217,7 @@ def configure_stealth(
     agent: str,
     *,
     is_mobile: bool | None = None,
-    stealth_script: str = "stealth_improved",
+    stealth_script: str = "stealth_improved.obf.js",
     platform: str = "chrome",
 ):
     final_js = render_stealth_script(
