@@ -100,32 +100,32 @@ def _write_overall_score_table(f, rows: list[dict[str, Any]], include_run_count:
     for row in rows:
         if include_run_count:
             f.write(
-                f"| {row['engine']} "
+                f"| {row.get('engine', 'unknown')} "
                 f"| {overall_score._fmt(row.get('run_count'), 0)} "
                 f"| {overall_score._fmt(row.get('overall_score'), 1)} "
-                f"| {overall_score._fmt(row['privacy_score'], 1)} "
-                f"| {overall_score._fmt(row['performance_score'], 1)} "
-                f"| {overall_score._fmt(row['windows_per_hour'], 1)} "
-                f"| {overall_score._fmt(row['estimated_instances'], 0)} "
-                f"| {row['bottleneck'] or 'n/a'} "
-                f"| {overall_score._fmt(row['full_test_duration_s'], 1)} "
-                f"| {overall_score._fmt(row['startup_time_ms'], 1)} "
-                f"| {overall_score._fmt(row['bypass_rate'] * 100 if row['bypass_rate'] is not None else None, 1)} "
-                f"| {overall_score._fmt(row['bot_human_score'] * 100 if row['bot_human_score'] is not None else None, 1)} |\n"
+                f"| {overall_score._fmt(row.get('privacy_score'), 1)} "
+                f"| {overall_score._fmt(row.get('performance_score'), 1)} "
+                f"| {overall_score._fmt(row.get('windows_per_hour'), 1)} "
+                f"| {overall_score._fmt(row.get('estimated_instances'), 0)} "
+                f"| {(row.get('bottleneck') or 'n/a')} "
+                f"| {overall_score._fmt(row.get('full_test_duration_s'), 1)} "
+                f"| {overall_score._fmt(row.get('startup_time_ms'), 1)} "
+                f"| {overall_score._fmt(row.get('bypass_rate') * 100 if row.get('bypass_rate') is not None else None, 1)} "
+                f"| {overall_score._fmt(row.get('bot_human_score') * 100 if row.get('bot_human_score') is not None else None, 1)} |\n"
             )
         else:
             f.write(
-                f"| {row['engine']} "
-                f"| {overall_score._fmt(row['privacy_score'], 1)} "
+                f"| {row.get('engine', 'unknown')} "
+                f"| {overall_score._fmt(row.get('privacy_score'), 1)} "
                 f"| {overall_score._fmt(row.get('overall_score'), 1)} "
-                f"| {overall_score._fmt(row['performance_score'], 1)} "
-                f"| {overall_score._fmt(row['windows_per_hour'], 1)} "
-                f"| {overall_score._fmt(row['estimated_instances'], 0)} "
-                f"| {row['bottleneck'] or 'n/a'} "
-                f"| {overall_score._fmt(row['full_test_duration_s'], 1)} "
-                f"| {overall_score._fmt(row['startup_time_ms'], 1)} "
-                f"| {overall_score._fmt(row['bypass_rate'] * 100 if row['bypass_rate'] is not None else None, 1)} "
-                f"| {overall_score._fmt(row['bot_human_score'] * 100 if row['bot_human_score'] is not None else None, 1)} |\n"
+                f"| {overall_score._fmt(row.get('performance_score'), 1)} "
+                f"| {overall_score._fmt(row.get('windows_per_hour'), 1)} "
+                f"| {overall_score._fmt(row.get('estimated_instances'), 0)} "
+                f"| {(row.get('bottleneck') or 'n/a')} "
+                f"| {overall_score._fmt(row.get('full_test_duration_s'), 1)} "
+                f"| {overall_score._fmt(row.get('startup_time_ms'), 1)} "
+                f"| {overall_score._fmt(row.get('bypass_rate') * 100 if row.get('bypass_rate') is not None else None, 1)} "
+                f"| {overall_score._fmt(row.get('bot_human_score') * 100 if row.get('bot_human_score') is not None else None, 1)} |\n"
             )
 
     f.write("\n\n")
@@ -219,6 +219,9 @@ def _write_fingerprint_section(f, browser_data_df: pd.DataFrame) -> None:
     """
 
     f.write("## Fingerprint Demo Scores\n\n")
+    if browser_data_df.empty or "engine" not in browser_data_df.columns:
+        f.write("*No Fingerprint demo data available*\n\n")
+        return
 
     suspect_col = "suspect_score"
     if suspect_col not in browser_data_df.columns:

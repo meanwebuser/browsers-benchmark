@@ -177,6 +177,7 @@ async def _run(
     engine_names: list[str] | None,
     allow_missing_proxy: bool,
 ) -> int:
+    settings.set_proxy_debug_verify_usage_for_tests(True)
     engine_configs = _filter_engine_configs(engine_names)
     print(f"Running proxy checks for {len(engine_configs)} engines...")
 
@@ -186,17 +187,20 @@ async def _run(
     else:
         print("Direct IP: unavailable (will still verify browser IP is non-empty)")
 
-    results: list[CheckResult] = []
-    for engine_config in engine_configs:
-        result = await _check_proxy_for_engine(
-            engine_config=engine_config,
-            direct_ip=direct_ip,
-            allow_missing_proxy=allow_missing_proxy,
-        )
-        results.append(result)
-        _print_result(result)
+    try:
+        results: list[CheckResult] = []
+        for engine_config in engine_configs:
+            result = await _check_proxy_for_engine(
+                engine_config=engine_config,
+                direct_ip=direct_ip,
+                allow_missing_proxy=allow_missing_proxy,
+            )
+            results.append(result)
+            _print_result(result)
 
-    return 1 if _summarize(results) > 0 else 0
+        return 1 if _summarize(results) > 0 else 0
+    finally:
+        settings.set_proxy_debug_verify_usage_for_tests(False)
 
 
 def _parse_args() -> argparse.Namespace:

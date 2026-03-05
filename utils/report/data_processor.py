@@ -19,6 +19,16 @@ def _base_engine_name(engine_name: str) -> str:
     return re.sub(r"__run\d+$", "", engine_name)
 
 
+def _observed_bypass_targets(results: List[Dict[str, Any]]) -> List[str]:
+    observed: set[str] = set()
+    for engine_result in results:
+        for target in engine_result.get("bypass_targets_results", []):
+            target_name = target.get("target")
+            if isinstance(target_name, str) and target_name.strip():
+                observed.add(target_name.strip())
+    return sorted(observed)
+
+
 def process_bypass_data(results: List[Dict[str, Any]]) -> pd.DataFrame:
     """
     Extract and process bypass data from benchmark results
@@ -28,7 +38,8 @@ def process_bypass_data(results: List[Dict[str, Any]]) -> pd.DataFrame:
     """
 
     bypass_rows = []
-    active_targets = _active_bypass_targets()
+    observed_targets = _observed_bypass_targets(results)
+    active_targets = observed_targets if observed_targets else []
     active_target_set = set(active_targets)
 
     for engine_result in results:
@@ -57,7 +68,7 @@ def process_bypass_data(results: List[Dict[str, Any]]) -> pd.DataFrame:
             bypass_rows.append(row)
             seen_targets.add(target_name)
 
-        # keep report aligned with the current target config
+        # keep report aligned with the targets that are actually present in this run
         for target_name in active_targets:
             if target_name in seen_targets:
                 continue

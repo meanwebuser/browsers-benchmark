@@ -1,21 +1,21 @@
 import os
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 from pydantic_settings import BaseSettings
 
 
 class ProxySettings(BaseModel):
     """Configuration settings for the proxy"""
 
-    enabled: bool = True
-    file_path: str = "documents/proxies.txt"
-    db_path: str = "documents/proxies.sqlite"
-    test_url: str = "http://httpbin.org/ip"
-    test_timeout: int = 10
-    debug_verify_usage: bool = False
-    lock_stale_s: int = 3600
-    max_retries: int = 3  # max proxy errors before exclusion (error_count < max_retries), 0 = unlimited
-    fallback_max_retries: int = 3  # maximum number of fallback attempts per target (0 = unlimited)
+    enabled: bool = True  # Global on/off switch for proxy assignment and proxy health checks.
+    file_path: str = "documents/proxies.txt"  # Source file with one proxy per line.
+    db_path: str = "documents/proxies.sqlite"  # SQLite cache/state store for proxy manager runtime data.
+    test_url: str = "http://httpbin.org/ip"  # URL used to quickly verify whether a proxy is alive.
+    test_timeout: int = 10  # Timeout in seconds for proxy connectivity and direct-IP checks.
+    debug_verify_usage: bool = False  # Test-only runtime flag: verify browser IP differs from direct IP.
+    lock_stale_s: int = 3600  # Stale lock threshold: reclaim proxy lock after this many seconds.
+    max_retries: int = 3  # Max proxy errors before exclusion (error_count < max_retries); 0 = unlimited.
+    fallback_max_retries: int = 3  # Max per-target proxy fallback attempts; 0 = unlimited.
 
     model_config = {"extra": "ignore"}
 
@@ -23,12 +23,12 @@ class ProxySettings(BaseModel):
 class PathSettings(BaseModel):
     """Configuration settings for file paths"""
 
-    documents_path: str = "documents"
-    binaries_dir: str = "binaries"
-    profiles_dir: str = "profiles"
-    results_path: str = "results"
-    media_dir: str = "media"
-    screenshots_dir: str = "screenshots"
+    documents_path: str = "documents"  # Root directory for project documents and runtime helper files.
+    binaries_dir: str = "binaries"  # Subdirectory containing downloaded/managed browser binaries.
+    profiles_dir: str = "profiles"  # Subdirectory for persisted browser profiles, when used.
+    results_path: str = "results"  # Root output directory for benchmark runs.
+    media_dir: str = "media"  # Subdirectory under each result containing charts/screenshots.
+    screenshots_dir: str = "screenshots"  # Per-engine screenshots directory name.
 
     @property
     def binaries_path(self) -> str:
@@ -44,11 +44,11 @@ class PathSettings(BaseModel):
 class BrowserSettings(BaseModel):
     """Configuration settings for browser engines"""
 
-    action_timeout_s: int = 60  # maximum time to wait for actions like search of elements, screenshots, clicks, etc.
-    page_load_timeout_s: int = 60  # maximum time to wait for page load in seconds
-    page_stabilization_delay_s: int = 5  # time to wait for page stabilization after navigation
-    mode: str = "both"  # one of 'headless', 'headed', 'both'
-    try_headed_without_display: bool = False
+    action_timeout_s: int = 60  # Timeout for browser actions: locating elements, JS execution, screenshots, etc.
+    page_load_timeout_s: int = 60  # Timeout for full page navigation and initial load completion.
+    page_stabilization_delay_s: int = 5  # Delay after navigation to allow async page scripts/DOM to settle.
+    mode: str = "both"  # Engine expansion mode: one of "headless", "headed", or "both".
+    try_headed_without_display: bool = False  # Allow headed launches in environments that may lack DISPLAY.
 
     model_config = {"extra": "ignore"}
 
@@ -56,43 +56,52 @@ class BrowserSettings(BaseModel):
 class Settings(BaseSettings):
     """Main application settings"""
 
+    _proxy_debug_verify_usage_test_override: bool = PrivateAttr(default=False)
+
     # proxy
-    PROXY_ENABLED: bool = True
-    PROXY_FILE_PATH: str = "documents/proxies.txt"
-    PROXY_DB_PATH: str = "documents/proxies.sqlite"
-    PROXY_TEST_URL: str = "http://httpbin.org/ip"
-    PROXY_TEST_TIMEOUT: int = 10
-    PROXY_DEBUG_VERIFY_USAGE: bool = False
-    PROXY_LOCK_STALE_S: int = 3600
-    PROXY_MAX_RETRIES: int = 3  # max proxy errors before exclusion (error_count < PROXY_MAX_RETRIES), 0 = unlimited
-    PROXY_FALLBACK_MAX_RETRIES: int = 3  # 0 = unlimited fallback retries per target
+    PROXY_ENABLED: bool = True  # Enables proxy manager flow (assignment, health checks, fallback logic).
+    PROXY_FILE_PATH: str = "documents/proxies.txt"  # File with proxies loaded at startup.
+    PROXY_DB_PATH: str = "documents/proxies.sqlite"  # Persistent SQLite state for proxy locking/statistics.
+    PROXY_TEST_URL: str = "http://httpbin.org/ip"  # Probe URL for checking whether a proxy can reach network.
+    PROXY_TEST_TIMEOUT: int = 10  # Probe timeout (seconds) for proxy/direct IP checks.
+    PROXY_LOCK_STALE_S: int = 3600  # Proxy lock recovery timeout (seconds).
+    PROXY_MAX_RETRIES: int = 3  # Errors allowed before proxy becomes unusable; 0 disables this limit.
+    PROXY_FALLBACK_MAX_RETRIES: int = 3  # Proxy fallback attempts per target; 0 = unlimited retries.
 
     # browser
-    ACTION_TIMEOUT_S: int = 30  # maximum time to wait for actions like search of elements, screenshots, clicks, etc.
-    PAGE_LOAD_TIMEOUT_S: int = 90  # maximum time to wait for page load in seconds
-    PAGE_STABILIZATION_DELAY_S: int = 5  # time to wait for page stabilization after navigation
-    ENGINES_TO_TEST_MODE: str = "both"  # one of 'headless', 'headed', 'both'
-    BROWSER_TRY_HEADED_WITHOUT_DISPLAY: bool = False
-    ENGINE_STEALTH_MODE: str = "both"  # one of 'no_stealth', 'use_stealth', 'both'
-    ENGINE_USER_AGENT_MODE: str = "random"  # one of 'random', 'native'
-    CAMOUFOX_UNLOCK_SHADOW_DOM: bool = True
-    NUM_WORKERS_MIN: int = 1
-    NUM_WORKERS_MAX: int = 10
-    BENCHMARK_REPEAT_COUNT: int = 1
-    ENGINE_MAX_ATTEMPTS: int = 30  # 0 = unlimited total fallback attempts per engine run
-    ENGINE_PROXY_FALLBACK_MAX_ATTEMPTS: int | None = None  # legacy alias for ENGINE_MAX_ATTEMPTS
-    ENGINE_RUN_TIMEOUT_S: int = 0  # 0 = unlimited total runtime per engine run
+    ACTION_TIMEOUT_S: int = 30  # Timeout for interactive actions (clicks/selectors/JS/screenshot).
+    PAGE_LOAD_TIMEOUT_S: int = 90  # Hard timeout for page load/navigation.
+    PAGE_STABILIZATION_DELAY_S: int = 5  # Post-navigation delay to reduce flaky signal extraction.
+    ENGINES_TO_TEST_MODE: str = "both"  # Expand engines as headed/headless variants ("headless"|"headed"|"both").
+    BROWSER_TRY_HEADED_WITHOUT_DISPLAY: bool = False  # Attempt headed mode in CI/server setups without display.
+    ENGINE_STEALTH_MODE: str = "both"  # Expand stealth variants ("no_stealth"|"use_stealth"|"both").
+    ENGINE_USER_AGENT_MODE: str = "random"  # User-agent strategy: generated random UA or engine-native.
+    CAMOUFOX_UNLOCK_SHADOW_DOM: bool = True  # Enable Camoufox helper to expose Shadow DOM for selectors.
+    NUM_WORKERS_MIN: int = 1  # Lower bound for parallel engine workers.
+    NUM_WORKERS_MAX: int = 10  # Upper bound for parallel engine workers.
+    BENCHMARK_REPEAT_COUNT: int = 1  # Number of repeated full runs per engine.
+    ENGINE_MAX_ATTEMPTS: int = 30  # Max total target attempts per engine run; 0 = unlimited.
+    ENGINE_PROXY_FALLBACK_MAX_ATTEMPTS: int | None = None  # Legacy alias for ENGINE_MAX_ATTEMPTS.
+    ENGINE_RUN_TIMEOUT_S: int = 0  # Max wall-clock runtime per engine run; 0 = unlimited.
 
     # paths
-    DOCUMENTS_PATH: str = "documents"
-    BINARIES_DIR: str = "binaries"
-    PROFILES_DIR: str = "profiles"
-    RESULTS_PATH: str = "results"
-    MEDIA_DIR: str = "media"
-    SCREENSHOTS_DIR: str = "screenshots"
+    DOCUMENTS_PATH: str = "documents"  # Root documents directory.
+    BINARIES_DIR: str = "binaries"  # Browser binaries directory name under DOCUMENTS_PATH.
+    PROFILES_DIR: str = "profiles"  # Browser profiles directory name under DOCUMENTS_PATH.
+    RESULTS_PATH: str = "results"  # Root benchmark output folder.
+    MEDIA_DIR: str = "media"  # Media artifacts folder name inside each result.
+    SCREENSHOTS_DIR: str = "screenshots"  # Screenshot artifacts folder name inside media.
 
     # constants
-    MAX_RETRIES: int = 3  # maximum retries for failed tests
+    MAX_RETRIES: int = 3  # Generic retry budget for recoverable benchmark operations.
+
+    def set_proxy_debug_verify_usage_for_tests(self, enabled: bool) -> None:
+        """
+        Test-only runtime override for proxy usage verification.
+
+        Not sourced from environment variables by design.
+        """
+        self._proxy_debug_verify_usage_test_override = bool(enabled)
 
     @property
     def proxy(self) -> ProxySettings:
@@ -104,7 +113,7 @@ class Settings(BaseSettings):
             db_path=self.PROXY_DB_PATH,
             test_url=self.PROXY_TEST_URL,
             test_timeout=self.PROXY_TEST_TIMEOUT,
-            debug_verify_usage=self.PROXY_DEBUG_VERIFY_USAGE,
+            debug_verify_usage=self._proxy_debug_verify_usage_test_override,
             lock_stale_s=self.PROXY_LOCK_STALE_S,
             max_retries=self.PROXY_MAX_RETRIES,
             fallback_max_retries=fallback_max_retries,
