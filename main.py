@@ -558,6 +558,30 @@ def run_engine_worker(task):
 
 def run_parallel_benchmarks() -> None:
     """Запуск бенчмарков параллельно для всех движков"""
+    selected_engine_names = {
+        name.strip()
+        for name in os.environ.get("BENCHMARK_ENGINE_NAMES", "").split(",")
+        if name.strip()
+    }
+    if selected_engine_names:
+        original_count = len(engines_config.engines)
+        engines_config.engines = [
+            engine_config
+            for engine_config in engines_config.engines
+            if engine_config["params"].get("name") in selected_engine_names
+        ]
+        selected_after_filter = {
+            engine_config["params"].get("name") for engine_config in engines_config.engines
+        }
+        missing = sorted(selected_engine_names - selected_after_filter)
+        if missing:
+            raise ValueError(f"Unknown BENCHMARK_ENGINE_NAMES: {missing}")
+        logger.info(
+            "Filtered engines via BENCHMARK_ENGINE_NAMES: %s/%s selected: %s",
+            len(engines_config.engines),
+            original_count,
+            sorted(selected_engine_names),
+        )
     direct_external_ip = None
     repeat_count = max(1, settings.BENCHMARK_REPEAT_COUNT)
     # Проверка прокси (как в оригинале)
@@ -576,9 +600,11 @@ def run_parallel_benchmarks() -> None:
         for engine_config in engines_config.engines:
             engine_cls = engine_config["class"]
             temp_engine = engine_cls(**engine_config["params"])
+            supported_protocols_attr = temp_engine.supported_proxy_protocols
+            supported_protocols = supported_protocols_attr() if callable(supported_protocols_attr) else supported_protocols_attr
             engines_with_protocols.append((
                 engine_config['params']['name'],
-                temp_engine.supported_proxy_protocols
+                supported_protocols
             ))
         if not proxy_manager.validate_proxy_count_by_protocol(engines_with_protocols):
             logger.error("PROXY VALIDATION FAILED! Not enough compatible proxies.")
@@ -607,7 +633,8 @@ def run_parallel_benchmarks() -> None:
         for engine_config in engines_config.engines:
             base_engine_name = engine_config["params"]["name"]
             temp_engine = engine_config["class"](**engine_config["params"])
-            supported_protocols = temp_engine.supported_proxy_protocols
+            supported_protocols_attr = temp_engine.supported_proxy_protocols
+            supported_protocols = supported_protocols_attr() if callable(supported_protocols_attr) else supported_protocols_attr
             run_engine_name = (
                 f"{base_engine_name}__run{run_idx}" if repeat_count > 1 else base_engine_name
             )

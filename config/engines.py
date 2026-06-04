@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
 from config.settings import settings
+from engines.damru.damru_engine import DamruEngine
 from engines.hero.ulixee_hero_engine import UlixeeHeroEngine
 from engines.node.node_playwright_engine import NodePlaywrightEngine
 from engines.nodriver.nodriver_engine import NoDriverEngine
@@ -114,6 +115,13 @@ class EnginesSettings(BaseSettings):
 
         base_engines = [
             {
+                "class": DamruEngine,
+                "params": {
+                    "name": "damru",
+                    "browser_type": "android-chrome",
+                }
+            },
+            {
                 "class": PlaywrightEngine,
                 "params": {
                     "headless": True,
@@ -215,8 +223,10 @@ class EnginesSettings(BaseSettings):
                 if headless_value is not None:
                     params["headless"] = headless_value
 
+                if getattr(engine_cls, "supports_stealth_variants", True) is False:
+                    stealth_variants = [False]
                 # TfPlaywrightStealthEngine is inherently stealth; it only has stealth variants.
-                if engine_cls is TfPlaywrightStealthEngine:
+                elif engine_cls is TfPlaywrightStealthEngine:
                     if stealth_mode == "no_stealth":
                         continue
                     stealth_variants = [True]

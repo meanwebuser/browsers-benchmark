@@ -31,3 +31,6 @@ pytest==8.4.2
 
 #output
 openpyxl
+
+# Android Chrome automation
+damru @ git+https://github.com/meanwebuser/damru.git
