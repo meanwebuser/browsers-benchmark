@@ -251,7 +251,42 @@ def main() -> int:
         type=int,
         help="Limit selected targets to first N in the final selection order.",
     )
+    parser.add_argument(
+        "--no-monitoring",
+        action="store_true",
+        help="Disable resource monitoring for this validation run.",
+    )
+    parser.add_argument(
+        "--monitoring-verbose",
+        action="store_true",
+        help="Log each resource monitoring sample.",
+    )
+    parser.add_argument(
+        "--monitoring-sample-interval",
+        type=float,
+        help="Resource monitoring sample interval in seconds.",
+    )
+    parser.add_argument(
+        "--no-screenshots",
+        action="store_true",
+        help="Disable screenshots for this validation run.",
+    )
+    parser.add_argument(
+        "--screenshot-on-error",
+        action="store_true",
+        help="Take screenshots even after target errors.",
+    )
     args = parser.parse_args()
+
+    settings.MONITORING_ENABLED = not args.no_monitoring
+    if args.monitoring_verbose:
+        settings.MONITORING_VERBOSE = True
+    if args.monitoring_sample_interval is not None:
+        settings.MONITORING_SAMPLE_INTERVAL_S = args.monitoring_sample_interval
+    if args.no_screenshots:
+        settings.SCREENSHOTS_ENABLED = False
+    if args.screenshot_on_error:
+        settings.SKIP_SCREENSHOT_ON_ERROR = False
 
     try:
         selected_engines = _resolve_engine_names(

@@ -173,7 +173,9 @@ def _resolve_target_url(target: Dict[str, Any]) -> str:
 async def collect_peak_resources(
         engine: BrowserEngine,
         stop_event: asyncio.Event,
-        sample_interval_s: float = 0.2
+        sample_interval_s: float = 0.2,
+        verbose: bool = False,
+        target_name: str = "",
 ) -> tuple[int, float]:
     """
     Collect peak memory and max CPU while the caller-controlled window is active.
@@ -190,6 +192,15 @@ async def collect_peak_resources(
             peak_rss_mb = memory_mb
         if cpu_percent > max_cpu_percent:
             max_cpu_percent = cpu_percent
+        if verbose:
+            logger.info(
+                "monitor target=%s memory_mb=%d cpu_percent=%.1f peak_rss_mb=%d max_cpu_percent=%.1f",
+                target_name,
+                memory_mb,
+                cpu_percent,
+                peak_rss_mb,
+                max_cpu_percent,
+            )
 
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=sample_interval_s)
@@ -217,29 +228,63 @@ async def test_bypass_target(
     target_url = _resolve_target_url(target)
     result = BypassTestResult(target=target["name"], url=target_url)
     test_started_at = monotonic()
+    target_failed = False
 
     async def attempt_bypass_test():
         monitoring_stop_event = asyncio.Event()
-        monitor_task = asyncio.create_task(collect_peak_resources(engine, monitoring_stop_event))
+        monitor_task = None
+        if settings.monitoring.enabled:
+            monitor_task = asyncio.create_task(
+                collect_peak_resources(
+                    engine,
+                    monitoring_stop_event,
+                    sample_interval_s=settings.monitoring.sample_interval_s,
+                    verbose=settings.monitoring.verbose,
+                    target_name=target["name"],
+                )
+            )
 
         try:
+            phase_started_at = monotonic()
+            logger.info("target=%s phase=navigate status=start url=%s", target["name"], target_url)
             navigation_result = await engine.navigate(target_url)
             result.performance.load_time_ms = int(navigation_result.get("load_time", 0) * 1000)
+            logger.info(
+                "target=%s phase=navigate status=ok duration_ms=%d",
+                target["name"],
+                int((monotonic() - phase_started_at) * 1000),
+            )
 
             check_function = benchmark_targets_config.bypass_targets.checkers.get(target["check_function"])
             if check_function is None:
                 raise ValueError(f"Check function '{target['check_function']}' not found")
 
-            await asyncio.sleep(settings.browser.page_stabilization_delay_s)  # wait for page to stabilize
+            phase_started_at = monotonic()
+            logger.info("target=%s phase=stabilize status=start delay_s=%s", target["name"], settings.browser.page_stabilization_delay_s)
+            await asyncio.sleep(settings.browser.page_stabilization_delay_s)
+            logger.info(
+                "target=%s phase=stabilize status=ok duration_ms=%d",
+                target["name"],
+                int((monotonic() - phase_started_at) * 1000),
+            )
 
             result.performance.memory_mb = int(engine.get_memory_usage())
             result.performance.cpu_percent = engine.get_cpu_usage()
+            phase_started_at = monotonic()
+            logger.info("target=%s phase=check status=start checker=%s", target["name"], target["check_function"])
             result.bypass = await check_function(engine)
+            logger.info(
+                "target=%s phase=check status=ok bypass=%s duration_ms=%d",
+                target["name"],
+                result.bypass,
+                int((monotonic() - phase_started_at) * 1000),
+            )
         finally:
-            monitoring_stop_event.set()
-            peak_rss_mb, max_cpu_percent = await monitor_task
-            result.performance.peak_rss_mb = max(result.performance.memory_mb, peak_rss_mb)
-            result.performance.max_cpu_percent = max(result.performance.cpu_percent, max_cpu_percent)
+            if monitor_task is not None:
+                monitoring_stop_event.set()
+                peak_rss_mb, max_cpu_percent = await monitor_task
+                result.performance.peak_rss_mb = max(result.performance.memory_mb, peak_rss_mb)
+                result.performance.max_cpu_percent = max(result.performance.cpu_percent, max_cpu_percent)
 
         return result
 
@@ -248,17 +293,18 @@ async def test_bypass_target(
         if settings.proxy.enabled and getattr(engine, "proxy", None):
             proxy_manager.mark_proxy_success(engine.proxy, site=target["name"])
     except Exception as e:
-        # check if this is a proxy-related error that warrants fallback
+        target_failed = True
+        logger.info("target=%s phase=target status=error duration_ms=%d", target["name"], int((monotonic() - test_started_at) * 1000))
         if is_proxy_related_error(e) and settings.proxy.enabled:
             fallback_result, error_msg = await handle_proxy_fallback(
                 engine, target['name'], e, attempt_bypass_test
             )
             if fallback_result:
                 result = fallback_result
+                target_failed = bool(result.error)
             else:
                 result.error = error_msg
         else:
-            # non-proxy error - just record it
             result.error = str(e)
             if settings.proxy.enabled and getattr(engine, "proxy", None):
                 proxy_manager.mark_proxy_error(
@@ -271,7 +317,16 @@ async def test_bypass_target(
     finally:
         result.performance.test_duration_ms = int((monotonic() - test_started_at) * 1000)
 
-    await take_screenshot(engine, screenshots_path, target["name"])
+    if settings.monitoring.screenshots_enabled:
+        if target_failed and settings.monitoring.skip_screenshot_on_error:
+            logger.info("target=%s phase=screenshot status=skipped reason=target_error", target["name"])
+        else:
+            screenshot_started_at = monotonic()
+            logger.info("target=%s phase=screenshot status=start", target["name"])
+            await take_screenshot(engine, screenshots_path, target["name"])
+            logger.info("target=%s phase=screenshot status=done duration_ms=%d", target["name"], int((monotonic() - screenshot_started_at) * 1000))
+    else:
+        logger.info("target=%s phase=screenshot status=skipped reason=disabled", target["name"])
 
     return result
 
@@ -294,19 +349,40 @@ async def extract_browser_data(
     target_url = _resolve_target_url(target)
     result = BrowserDataResult(target=target["name"], url=target_url)
     test_started_at = monotonic()
+    target_failed = False
 
     async def attempt_data_extraction():
+        phase_started_at = monotonic()
+        logger.info("target=%s phase=navigate status=start url=%s", target["name"], target_url)
         navigation_result = await engine.navigate(target_url)
         result.navigation_time_ms = int(navigation_result.get("load_time", 0) * 1000)
-        await asyncio.sleep(settings.browser.page_stabilization_delay_s)  # ensure page is fully loaded
+        logger.info(
+            "target=%s phase=navigate status=ok duration_ms=%d",
+            target["name"],
+            int((monotonic() - phase_started_at) * 1000),
+        )
+        phase_started_at = monotonic()
+        logger.info("target=%s phase=stabilize status=start delay_s=%s", target["name"], settings.browser.page_stabilization_delay_s)
+        await asyncio.sleep(settings.browser.page_stabilization_delay_s)
+        logger.info(
+            "target=%s phase=stabilize status=ok duration_ms=%d",
+            target["name"],
+            int((monotonic() - phase_started_at) * 1000),
+        )
 
         extract_function = benchmark_targets_config.browser_data_targets.checkers.get(target["check_function"])
         if extract_function is None:
             raise ValueError(f"Extract function '{target['check_function']}' not found")
 
+        phase_started_at = monotonic()
+        logger.info("target=%s phase=extract status=start checker=%s", target["name"], target["check_function"])
         target_data = await extract_function(engine)
+        logger.info(
+            "target=%s phase=extract status=ok duration_ms=%d",
+            target["name"],
+            int((monotonic() - phase_started_at) * 1000),
+        )
 
-        # update result with extracted data
         for key, value in target_data.items():
             if hasattr(result, key):
                 setattr(result, key, value)
@@ -318,17 +394,18 @@ async def extract_browser_data(
         if settings.proxy.enabled and getattr(engine, "proxy", None):
             proxy_manager.mark_proxy_success(engine.proxy, site=target["name"])
     except Exception as e:
-        # check if this is a proxy-related error that warrants fallback
+        target_failed = True
+        logger.info("target=%s phase=target status=error duration_ms=%d", target["name"], int((monotonic() - test_started_at) * 1000))
         if is_proxy_related_error(e) and settings.proxy.enabled:
             fallback_result, error_msg = await handle_proxy_fallback(
                 engine, target['name'], e, attempt_data_extraction
             )
             if fallback_result:
                 result = fallback_result
+                target_failed = bool(result.error)
             else:
                 result.error = error_msg
         else:
-            # non-proxy error, just record it
             result.error = str(e)
             if settings.proxy.enabled and getattr(engine, "proxy", None):
                 proxy_manager.mark_proxy_error(
@@ -341,7 +418,16 @@ async def extract_browser_data(
     finally:
         result.test_duration_ms = int((monotonic() - test_started_at) * 1000)
 
-    await take_screenshot(engine, screenshots_path, target["name"])
+    if settings.monitoring.screenshots_enabled:
+        if target_failed and settings.monitoring.skip_screenshot_on_error:
+            logger.info("target=%s phase=screenshot status=skipped reason=target_error", target["name"])
+        else:
+            screenshot_started_at = monotonic()
+            logger.info("target=%s phase=screenshot status=start", target["name"])
+            await take_screenshot(engine, screenshots_path, target["name"])
+            logger.info("target=%s phase=screenshot status=done duration_ms=%d", target["name"], int((monotonic() - screenshot_started_at) * 1000))
+    else:
+        logger.info("target=%s phase=screenshot status=skipped reason=disabled", target["name"])
 
     return result
 

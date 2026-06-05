@@ -53,6 +53,16 @@ class BrowserSettings(BaseModel):
     model_config = {"extra": "ignore"}
 
 
+class MonitoringSettings(BaseModel):
+    enabled: bool = True
+    verbose: bool = False
+    sample_interval_s: float = 0.2
+    screenshots_enabled: bool = True
+    skip_screenshot_on_error: bool = True
+
+    model_config = {"extra": "ignore"}
+
+
 class Settings(BaseSettings):
     """Main application settings"""
 
@@ -83,6 +93,12 @@ class Settings(BaseSettings):
     ENGINE_MAX_ATTEMPTS: int = 30  # Max total target attempts per engine run; 0 = unlimited.
     ENGINE_PROXY_FALLBACK_MAX_ATTEMPTS: int | None = None  # Legacy alias for ENGINE_MAX_ATTEMPTS.
     ENGINE_RUN_TIMEOUT_S: int = 0  # Max wall-clock runtime per engine run; 0 = unlimited.
+
+    MONITORING_ENABLED: bool = True
+    MONITORING_VERBOSE: bool = False
+    MONITORING_SAMPLE_INTERVAL_S: float = 0.2
+    SCREENSHOTS_ENABLED: bool = True
+    SKIP_SCREENSHOT_ON_ERROR: bool = True
 
     # paths
     DOCUMENTS_PATH: str = "documents"  # Root documents directory.
@@ -140,6 +156,16 @@ class Settings(BaseSettings):
             page_stabilization_delay_s=self.PAGE_STABILIZATION_DELAY_S,
             mode=self.ENGINES_TO_TEST_MODE,
             try_headed_without_display=self.BROWSER_TRY_HEADED_WITHOUT_DISPLAY
+        )
+
+    @property
+    def monitoring(self) -> MonitoringSettings:
+        return MonitoringSettings(
+            enabled=self.MONITORING_ENABLED,
+            verbose=self.MONITORING_VERBOSE,
+            sample_interval_s=self.MONITORING_SAMPLE_INTERVAL_S,
+            screenshots_enabled=self.SCREENSHOTS_ENABLED,
+            skip_screenshot_on_error=self.SKIP_SCREENSHOT_ON_ERROR,
         )
 
     model_config = {
