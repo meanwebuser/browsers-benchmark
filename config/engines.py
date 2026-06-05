@@ -119,6 +119,7 @@ class EnginesSettings(BaseSettings):
                 "params": {
                     "name": "damru",
                     "browser_type": "android-chrome",
+                    "serial": "127.0.0.1:5600",
                 }
             },
             {
