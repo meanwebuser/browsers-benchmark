@@ -46,6 +46,19 @@ def setup_logging(
         file_handler.addFilter(_ContextFilter(engine_name))
         root_logger.addHandler(file_handler)
 
+    # Force every log handler to flush after each message so crash logs
+    # are never lost in a buffer.
+    for handler in root_logger.handlers:
+        original_emit = handler.emit
+
+        def _flushing_emit(h: logging.Handler, orig=original_emit) -> None:
+            def emit(record: logging.LogRecord) -> None:
+                orig(record)
+                h.flush()
+            return emit
+
+        handler.emit = _flushing_emit(handler)
+
     # disable debug logging for specific libraries to reduce noise
     no_debug_loggers = ['asyncio']
     for lib in no_debug_loggers:

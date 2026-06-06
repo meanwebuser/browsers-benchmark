@@ -1,12 +1,96 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+import faulthandler
 import logging
 import os
 import re
+import signal
 import sys
+import threading
+import traceback
 from datetime import datetime
 from typing import Any, Dict, Iterable, Tuple
+
+#
+# Global crash-safety nets: fault handler, exception hooks, signal handlers.
+#
+# All go to the same file so we have a single source of truth for crash diagnostics.
+_FAULT_LOG_PATH = "/tmp/browser_bench_fault.log"
+
+faulthandler.enable(file=open(_FAULT_LOG_PATH, "w"), all_threads=True)
+
+
+def _global_excepthook(exc_type, exc_value, exc_tb):
+    """Catches any unhandled Python exception before the interpreter dies."""
+    with open(_FAULT_LOG_PATH, "a") as f:
+        f.write(f"\n=== Unhandled exception: {exc_type.__name__}: {exc_value} ===\n")
+        traceback.print_tb(exc_tb, file=f)
+        f.write("\n")
+    try:
+        logger = logging.getLogger(__name__)
+        logger.critical(
+            "Unhandled exception: %s: %s", exc_type.__name__, exc_value,
+            exc_info=(exc_type, exc_value, exc_tb),
+        )
+    except Exception:
+        pass
+
+
+sys.excepthook = _global_excepthook
+
+
+def _thread_excepthook(args):
+    """Catches unhandled exceptions in background threads."""
+    with open(_FAULT_LOG_PATH, "a") as f:
+        f.write(f"\n=== Unhandled thread exception: {args.exc_type.__name__}: {args.exc_value} ===\n")
+        traceback.print_tb(args.exc_tb, file=f)
+        f.write("\n")
+
+
+threading.excepthook = _thread_excepthook
+
+
+def _signal_handler(signum, frame):
+    """Logs why the process received a termination signal."""
+    signame = signal.Signals(signum).name
+    with open(_FAULT_LOG_PATH, "a") as f:
+        f.write(f"\n=== Process terminated by signal {signame} ({signum}) ===\n")
+        traceback.print_stack(frame, file=f)
+        f.write("\n")
+    try:
+        logger = logging.getLogger(__name__)
+        logger.critical("Process terminated by signal %s (%d)", signame, signum)
+    except Exception:
+        pass
+    sys.exit(128 + signum)
+
+
+signal.signal(signal.SIGTERM, _signal_handler)
+signal.signal(signal.SIGINT, _signal_handler)
+# SIGSEGV / SIGABRT / SIGBUS are handled by faulthandler above
+
+
+#
+# Heartbeat watchdog — runs in a daemon thread so it fires even when the
+# event loop is blocked by a C extension (Playwright driver, etc.).
+#
+_HEARTBEAT_STOP = threading.Event()
+
+
+def _heartbeat_loop() -> None:
+    logger = logging.getLogger(__name__)
+    tick = 0
+    while not _HEARTBEAT_STOP.wait(30):
+        tick += 1
+        logger.info(
+            "heartbeat #%d — process still alive (fault log: %s)",
+            tick, _FAULT_LOG_PATH,
+        )
+
+
+_heartbeat_thread = threading.Thread(target=_heartbeat_loop, daemon=True, name="heartbeat")
+_heartbeat_thread.start()
 
 from config.benchmark_targets import benchmark_targets_config
 from config.engines import engines_config
@@ -128,6 +212,13 @@ async def _run_engine_selection(
 ) -> int:
     result_path, _, screenshots_path = create_directory_structure(timestamp)
 
+    # Copy crash diagnostics into the result folder for later inspection.
+    try:
+        import shutil
+        shutil.copy(_FAULT_LOG_PATH, os.path.join(result_path, "crash_diagnostics.log"))
+    except Exception:
+        pass
+
     direct_external_ip = None
     if use_proxy and settings.proxy.enabled:
         direct_external_ip = get_external_ip(timeout=settings.proxy.test_timeout)
@@ -146,11 +237,17 @@ async def _run_engine_selection(
     successful_runs = 0
     failed_runs = 0
     last_results_file: str | None = None
+    engine_timeout = max(0, int(settings.ENGINE_RUN_TIMEOUT_S))
 
-    for engine_name in engine_names:
+    for idx, engine_name in enumerate(engine_names, 1):
         safe_engine_name = re.sub(r"[^a-zA-Z0-9_.-]+", "_", engine_name)
         log_file = os.path.join(result_path, "logs", f"{safe_engine_name}.log")
         setup_logging(log_file=log_file, engine_name=engine_name)
+
+        logger.info(
+            "=== [%d/%d] Starting engine '%s' (timeout=%ss) ===",
+            idx, len(engine_names), engine_name, engine_timeout or "unlimited",
+        )
 
         engine_config = _find_engine_config(engine_name)
         engine_cls = engine_config["class"]
@@ -175,19 +272,43 @@ async def _run_engine_selection(
             else:
                 logger.warning("%s does not support proxies. Running without proxy.", engine_name)
 
-        results = await run_benchmark_for_engine(
-            engine_cls=engine_cls,
-            engine_params=engine_params,
-            bypass_targets=bypass_targets,
-            browser_data_targets=browser_data_targets,
-            screenshots_path=screenshots_path,
-            proxy=proxy,
-            direct_external_ip=direct_external_ip,
-        )
+        # Wrap each engine run so a single failure never kills the whole script.
+        try:
+            run_coro = run_benchmark_for_engine(
+                engine_cls=engine_cls,
+                engine_params=engine_params,
+                bypass_targets=bypass_targets,
+                browser_data_targets=browser_data_targets,
+                screenshots_path=screenshots_path,
+                proxy=proxy,
+                direct_external_ip=direct_external_ip,
+            )
+
+            if engine_timeout > 0:
+                results = await asyncio.wait_for(run_coro, timeout=engine_timeout)
+            else:
+                results = await run_coro
+        except asyncio.TimeoutError:
+            logger.error(
+                "Engine '%s' timed out after %ss. Check %s for details.",
+                engine_name, engine_timeout, _FAULT_LOG_PATH,
+            )
+            results = None
+        except asyncio.CancelledError:
+            logger.error("Engine '%s' was cancelled.", engine_name)
+            results = None
+        except Exception as exc:
+            logger.exception("Engine '%s' crashed: %s", engine_name, exc)
+            results = None
 
         if not results:
             logger.error("Engine run returned no results for %s.", engine_name)
             failed_runs += 1
+            # Copy crash diagnostics snapshot after each failed engine.
+            try:
+                shutil.copy(_FAULT_LOG_PATH, os.path.join(result_path, f"crash_{safe_engine_name}.log"))
+            except Exception:
+                pass
             continue
 
         last_results_file = save_results(results, result_path)
@@ -307,6 +428,8 @@ def main() -> int:
         setup_logging(engine_name="engine-validation")
         logger.exception("Engine validation crashed: %s", exc)
         return 1
+    finally:
+        _HEARTBEAT_STOP.set()
 
 
 if __name__ == "__main__":

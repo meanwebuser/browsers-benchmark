@@ -289,7 +289,12 @@ async def test_bypass_target(
         return result
 
     try:
-        result = await attempt_bypass_test()
+        per_target_timeout = (
+            settings.browser.page_load_timeout_s
+            + settings.browser.page_stabilization_delay_s
+            + 30  # buffer for check function + overhead
+        )
+        result = await asyncio.wait_for(attempt_bypass_test(), timeout=per_target_timeout)
         if settings.proxy.enabled and getattr(engine, "proxy", None):
             proxy_manager.mark_proxy_success(engine.proxy, site=target["name"])
     except Exception as e:
