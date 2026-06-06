@@ -60,6 +60,9 @@ class DamruEngine(PlaywrightBase):
         self._start_time: Optional[float] = None
         self._adb_serial: Optional[str] = None
         self._chrome_pid: Optional[int] = None
+        self._container_id: Optional[str] = None
+        self._prev_cpu: Optional[int] = None
+        self._prev_cpu_ts: Optional[float] = None
 
     @property
     def supported_proxy_protocols(self) -> list[str]:
@@ -109,8 +112,9 @@ class DamruEngine(PlaywrightBase):
 
         self._adb_serial = getattr(self._damru, "_serial", self.serial)
         await self._resolve_chrome_pid()
-        logger.info("DAMRU engine %s started in %.0f ms (adb_serial=%s, chrome_pid=%s)",
-                     self.name, self.startup_ms, self._adb_serial, self._chrome_pid)
+        await self._detect_container()
+        logger.info("DAMRU engine %s started in %.0f ms (adb_serial=%s, chrome_pid=%s, container=%s)",
+                     self.name, self.startup_ms, self._adb_serial, self._chrome_pid, self._container_id)
 
     async def _adb_shell(self, command: str) -> str:
         proc = await asyncio.create_subprocess_exec(
@@ -135,48 +139,57 @@ class DamruEngine(PlaywrightBase):
         except Exception as e:
             logger.debug("Failed to resolve Chrome PID via ADB: %s", e)
 
-    def get_memory_usage(self) -> int:
-        if not self._adb_serial or not self._chrome_pid:
+    async def _detect_container(self) -> None:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "ps", "--filter", "name=damru", "--format", "{{.ID}}",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=10)
+            cid = stdout.decode().strip().split("\n")[0] if stdout else ""
+            if cid:
+                self._container_id = cid[:12]
+        except Exception as e:
+            logger.debug("Failed to detect Docker container: %s", e)
+
+    def _container_memory_mb(self) -> int:
+        if not self._container_id:
             return 0
         try:
             import subprocess
             result = subprocess.run(
-                ["adb", "-s", self._adb_serial, "shell",
-                 f"cat /proc/{self._chrome_pid}/status 2>/dev/null | grep VmRSS"],
+                ["docker", "stats", "--no-stream", "--format", "{{.MemUsage}}", self._container_id],
                 capture_output=True, text=True, timeout=10,
             )
             if result.returncode == 0:
-                match = re.search(r"(\d+)\s+kB", result.stdout)
-                if match:
-                    return int(match.group(1)) // 1024
+                mem_str = result.stdout.strip().split("/")[0].strip()
+                if mem_str.endswith("MiB"):
+                    return int(float(mem_str.replace("MiB", "")))
+                if mem_str.endswith("GiB"):
+                    return int(float(mem_str.replace("GiB", "")) * 1024)
         except Exception as e:
-            logger.debug("Failed to get Chrome memory via ADB: %s", e)
+            logger.debug("Failed to get container memory: %s", e)
         return 0
 
+    def get_memory_usage(self) -> int:
+        return self._container_memory_mb()
+
     def get_cpu_usage(self) -> float:
-        if not self._adb_serial or not self._chrome_pid:
+        if not self._container_id:
             return 0.0
         try:
             import subprocess
-            result1 = subprocess.run(
-                ["adb", "-s", self._adb_serial, "shell",
-                 f"cat /proc/{self._chrome_pid}/stat 2>/dev/null | cut -d' ' -f14"],
-                capture_output=True, text=True, timeout=10,
-            )
             import time
-            time.sleep(0.1)
-            result2 = subprocess.run(
-                ["adb", "-s", self._adb_serial, "shell",
-                 f"cat /proc/{self._chrome_pid}/stat 2>/dev/null | cut -d' ' -f14"],
+            result = subprocess.run(
+                ["docker", "stats", "--no-stream", "--format", "{{.CPUPerc}}", self._container_id],
                 capture_output=True, text=True, timeout=10,
             )
-            utime1 = int(result1.stdout.strip()) if result1.stdout.strip().isdigit() else 0
-            utime2 = int(result2.stdout.strip()) if result2.stdout.strip().isdigit() else 0
-            clk_tck = 100
-            cpu_percent = (utime2 - utime1) / clk_tck / 0.1 * 100
-            return min(cpu_percent, 100.0)
+            if result.returncode == 0:
+                cpu_str = result.stdout.strip().replace("%", "")
+                return float(cpu_str) if cpu_str else 0.0
         except Exception as e:
-            logger.debug("Failed to get Chrome CPU via ADB: %s", e)
+            logger.debug("Failed to get container CPU: %s", e)
         return 0.0
 
     async def screenshot(self, path: str) -> None:
