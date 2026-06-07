@@ -717,6 +717,37 @@ def run_parallel_benchmarks() -> None:
     bypass_targets = [target.model_dump() for target in benchmark_targets_config.bypass_targets.targets]
     browser_data_targets = [target.model_dump() for target in benchmark_targets_config.browser_data_targets.targets]
 
+    # Pre-warm DAMRU container (creates Chrome prefs for fast warm start on real runs)
+    damru_engines = [
+        ec for ec in engines_config.engines
+        if ec["params"].get("name", "").startswith("damru")
+    ]
+    if damru_engines:
+        logger.info("Pre-warming DAMRU container for faster startup...")
+
+        async def _prewarm_damru():
+            from damru.async_core import AsyncDamru
+            damru_cfg = damru_engines[0]["params"]
+            warm_damru = AsyncDamru(
+                device=damru_cfg.get("device"),
+                serial=damru_cfg.get("serial"),
+                proxy=None,
+                timezone=damru_cfg.get("timezone"),
+                locale=damru_cfg.get("locale"),
+                chrome_package=damru_cfg.get("chrome_package"),
+                restore_props=damru_cfg.get("restore_props", True),
+                debug=damru_cfg.get("debug", False),
+            )
+            warm_context = await warm_damru.__aenter__()
+            await warm_context.pages[0].goto("about:blank", wait_until="load", timeout=10000)
+            await warm_damru.__aexit__(None, None, None)
+
+        try:
+            asyncio.run(_prewarm_damru())
+            logger.info("DAMRU container pre-warmed successfully")
+        except Exception as e:
+            logger.warning("DAMRU pre-warm failed (will cold start): %s", e)
+
     # Формируем список задач (каждая задача = один запуск движка)
     task_specs = []
     # Build task specs in waves: all engines run1, then all engines run2, etc.
