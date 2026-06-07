@@ -192,9 +192,41 @@ class DamruEngine(PlaywrightBase):
             logger.debug("Failed to get container CPU: %s", e)
         return 0.0
 
+    async def _ensure_alive(self) -> bool:
+        """Check if page/context is alive; try to reconnect if dead."""
+        if self.page is None or self.context is None:
+            return False
+        try:
+            await self.page.evaluate("1")
+            return True
+        except Exception:
+            pass
+        try:
+            pages = list(self.context.pages)
+            if pages:
+                self.page = pages[0]
+                self.page.set_default_timeout(settings.browser.action_timeout_s * 1000)
+                self.page.set_default_navigation_timeout(settings.browser.page_load_timeout_s * 1000)
+                await self.page.evaluate("1")
+                return True
+        except Exception:
+            pass
+        try:
+            self.context = await self._damru.reconnect_cdp()
+            pages = list(self.context.pages) or [await self.context.new_page()]
+            self.page = pages[0]
+            self.page.set_default_timeout(settings.browser.action_timeout_s * 1000)
+            self.page.set_default_navigation_timeout(settings.browser.page_load_timeout_s * 1000)
+            logger.info("CDP reconnected successfully")
+            return True
+        except Exception as e:
+            logger.warning("CDP reconnect failed: %s", e)
+            return False
+
     async def screenshot(self, path: str) -> None:
         if not self.page:
             raise RuntimeError("browser not started")
+        await self._ensure_alive()
         await self.page.screenshot(path=path, timeout=15000)
 
     async def stop(self) -> None:

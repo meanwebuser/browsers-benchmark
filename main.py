@@ -717,36 +717,43 @@ def run_parallel_benchmarks() -> None:
     bypass_targets = [target.model_dump() for target in benchmark_targets_config.bypass_targets.targets]
     browser_data_targets = [target.model_dump() for target in benchmark_targets_config.browser_data_targets.targets]
 
-    # Pre-warm DAMRU container (creates Chrome prefs for fast warm start on real runs)
+    # Pre-patch DAMRU GPU (avoids ~6s SurfaceFlinger restart during cold start)
     damru_engines = [
         ec for ec in engines_config.engines
         if ec["params"].get("name", "").startswith("damru")
     ]
     if damru_engines:
-        logger.info("Pre-warming DAMRU container for faster startup...")
+        logger.info("Pre-patching DAMRU GPU for faster startup...")
 
-        async def _prewarm_damru():
-            from damru.async_core import AsyncDamru
+        async def _prepatch_gpu():
+            from damru.root import RootOps
+            from damru.adb import ADB
+            from damru.devices import get_device
             damru_cfg = damru_engines[0]["params"]
-            warm_damru = AsyncDamru(
-                device=damru_cfg.get("device"),
-                serial=damru_cfg.get("serial"),
-                proxy=None,
-                timezone=damru_cfg.get("timezone"),
-                locale=damru_cfg.get("locale"),
-                chrome_package=damru_cfg.get("chrome_package"),
-                restore_props=damru_cfg.get("restore_props", True),
-                debug=damru_cfg.get("debug", False),
-            )
-            warm_context = await warm_damru.__aenter__()
-            await warm_context.pages[0].goto("about:blank", wait_until="load", timeout=10000)
-            await warm_damru.__aexit__(None, None, None)
+            serial = damru_cfg.get("serial", "127.0.0.1:5600")
+            device_name = damru_cfg.get("device", "Google Pixel 8a")
+            adb = ADB(serial=serial)
+            await adb.ensure_server()
+            adb.serial = serial
+            root = RootOps(adb)
+            root_ok = await root.check_root()
+            if not root_ok:
+                logger.warning("No root access for GPU pre-patch")
+                return
+            target_device = get_device(device_name)
+            eff_renderer = RootOps.effective_renderer(target_device)
+            already = await root.is_gpu_already_patched(eff_renderer)
+            if already:
+                logger.info("GPU already patched for '%s' - skip pre-patch", eff_renderer)
+            else:
+                logger.info("GPU not yet patched - applying binary patch (saves ~6s later)...")
+                await root.apply_gpu_binary_spoof(target_device)
 
         try:
-            asyncio.run(_prewarm_damru())
-            logger.info("DAMRU container pre-warmed successfully")
+            asyncio.run(_prepatch_gpu())
+            logger.info("DAMRU GPU pre-patch done")
         except Exception as e:
-            logger.warning("DAMRU pre-warm failed (will cold start): %s", e)
+            logger.warning("DAMRU GPU pre-patch failed: %s", e)
 
     # Формируем список задач (каждая задача = один запуск движка)
     task_specs = []
